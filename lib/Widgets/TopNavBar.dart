@@ -61,6 +61,7 @@ class TopNavBar extends StatelessWidget implements PreferredSizeWidget {
         title: Text(
           title, // Customizable center title
           style: const TextStyle(
+            fontWeight: FontWeight.bold,
             fontSize: 18,
             color: Colors.white,
             letterSpacing: 0.5,
@@ -72,11 +73,17 @@ class TopNavBar extends StatelessWidget implements PreferredSizeWidget {
           const SizedBox(width: 20),
           const Icon(Icons.settings_outlined, size: 22, color: Colors.white),
           const SizedBox(width: 20),
-          const Icon(Icons.notifications_outlined, size: 22, color: Colors.white),
+          const Icon(
+            Icons.notifications_outlined,
+            size: 22,
+            color: Colors.white,
+          ),
           const SizedBox(width: 20),
           CircleAvatar(
             radius: 18,
-            backgroundImage: NetworkImage(profileImageUrl), // Customizable profile
+            backgroundImage: NetworkImage(
+              profileImageUrl,
+            ), // Customizable profile
           ),
           const SizedBox(width: 25),
         ],
@@ -90,7 +97,11 @@ class TopNavBar extends StatelessWidget implements PreferredSizeWidget {
       children: [
         const Padding(
           padding: EdgeInsets.only(top: 8.0),
-          child: Icon(Icons.notifications_none_rounded, size: 24, color: Colors.white),
+          child: Icon(
+            Icons.notifications_none_rounded,
+            size: 24,
+            color: Colors.white,
+          ),
         ),
         Positioned(
           right: 0,

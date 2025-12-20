@@ -91,15 +91,15 @@ class _MainScreenState extends State<MainScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: CustomSidebarButton(
-    text: "Logout",
-    icon: Icons.logout_rounded,
-    color: Colors.grey,
-    borderColor: Colors.grey.shade200,
-    onTap: () {
-      // Add your logout logic here
-      print("User logged out");
-    },
-  ),
+                    text: "Logout",
+                    icon: Icons.logout_rounded,
+                    color: Colors.red,
+                    borderColor: Colors.black26,
+                    onTap: () {
+                      // Add your logout logic here
+                      print("User logged out");
+                    },
+                  ),
                 ),
               ],
             ),

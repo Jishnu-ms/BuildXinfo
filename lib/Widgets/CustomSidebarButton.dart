@@ -25,11 +25,7 @@ class CustomSidebarButton extends StatelessWidget {
       ),
       child: ListTile(
         dense: true,
-        leading: Icon(
-          icon,
-          color: color,
-          size: 20,
-        ),
+        leading: Icon(icon, color: color, size: 20),
         title: Text(
           text,
           style: TextStyle(

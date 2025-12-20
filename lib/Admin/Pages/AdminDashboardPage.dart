@@ -6,7 +6,7 @@ class AdminDashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Colors.transparent, 
+      backgroundColor: Colors.transparent,
       body: Center(
         child: Text(
           "ADMIN DASHBOARD PAGE\n(Welcome Priya Mehta)",
