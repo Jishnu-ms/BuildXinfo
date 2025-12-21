@@ -1,10 +1,8 @@
 
-import 'package:buildxinfo/Admin/AdminNavbar.dart';
-
+import 'package:buildxinfo/User/UserNavbar.dart';
 
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const AdminNavbar());
+  runApp(const UserNavbar());
 }
-
