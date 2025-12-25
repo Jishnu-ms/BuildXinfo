@@ -19,10 +19,7 @@ class UserProfileData {
 class ProfileHeader extends StatelessWidget {
   final UserProfileData userData;
 
-  const ProfileHeader({
-    super.key, 
-    required this.userData,
-  });
+  const ProfileHeader({super.key, required this.userData});
 
   @override
   Widget build(BuildContext context) {
@@ -103,9 +100,7 @@ class ProfileHeader extends StatelessWidget {
         Positioned.fill(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: CustomPaint(
-              painter: _HeaderWavePainter(),
-            ),
+            child: CustomPaint(painter: _HeaderWavePainter()),
           ),
         ),
       ],

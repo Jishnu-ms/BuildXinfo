@@ -50,10 +50,7 @@ class ActivityRow extends StatelessWidget {
             ),
           ),
           // Timestamp
-          Text(
-            time,
-            style: const TextStyle(color: Colors.grey, fontSize: 10),
-          ),
+          Text(time, style: const TextStyle(color: Colors.grey, fontSize: 10)),
         ],
       ),
     );

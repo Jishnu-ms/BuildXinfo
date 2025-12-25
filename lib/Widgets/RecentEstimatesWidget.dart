@@ -6,11 +6,7 @@ class EstimateData {
   final String date;
   final String price;
 
-  EstimateData({
-    required this.title,
-    required this.date,
-    required this.price,
-  });
+  EstimateData({required this.title, required this.date, required this.price});
 }
 
 // 2. The Reusable Recent Estimates Widget
@@ -44,7 +40,7 @@ class RecentEstimatesWidget extends StatelessWidget {
           const SizedBox(height: 15),
           // Map the list to build the items
           ...estimates.map((item) => _buildEstimateItem(item)),
-          
+
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -73,9 +69,9 @@ class RecentEstimatesWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
-              Icons.description, 
-              color: Colors.orangeAccent, 
-              size: 20
+              Icons.description,
+              color: Colors.orangeAccent,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -94,10 +90,7 @@ class RecentEstimatesWidget extends StatelessWidget {
                 ),
                 Text(
                   data.date,
-                  style: const TextStyle(
-                    color: Colors.grey, 
-                    fontSize: 12
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
             ),
@@ -106,7 +99,7 @@ class RecentEstimatesWidget extends StatelessWidget {
           Text(
             data.price,
             style: const TextStyle(
-              fontWeight: FontWeight.bold, 
+              fontWeight: FontWeight.bold,
               fontSize: 14,
               color: Colors.black87,
             ),

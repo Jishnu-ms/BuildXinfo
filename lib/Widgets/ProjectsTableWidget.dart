@@ -52,20 +52,29 @@ class ProjectsTableWidget extends StatelessWidget {
             // border: TableBorder(horizontalInside: BorderSide(color: Colors.grey.shade200, width: 1)),
             children: [
               // Header Row
-              _buildTableRow(["Project Name", "Location", "Status"], isHeader: true),
+              _buildTableRow([
+                "Project Name",
+                "Location",
+                "Status",
+              ], isHeader: true),
               // Data Rows mapped from your list
-              ...projects.map((project) => _buildTableRow([
-                    project.name,
-                    project.location,
-                    project.status,
-                  ])),
+              ...projects.map(
+                (project) => _buildTableRow([
+                  project.name,
+                  project.location,
+                  project.status,
+                ]),
+              ),
             ],
           ),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {},
-              child: const Text("View All >", style: TextStyle(color: Colors.blueAccent)),
+              child: const Text(
+                "View All >",
+                style: TextStyle(color: Colors.blueAccent),
+              ),
             ),
           ),
         ],
@@ -131,7 +140,7 @@ class ProjectsTableWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     // Default text for Name and Location
     return Text(
       text,

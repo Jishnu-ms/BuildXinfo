@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class MainChart extends StatelessWidget {
-   MainChart({super.key});
+  MainChart({super.key});
 
   // --- DEFINED DATA LISTS ---
   final List<double> actualCosts = [1.5, 3.0, 2.5, 1.8, 4.2, 2.8, 3.5, 4.0];
@@ -29,10 +29,8 @@ class MainChart extends StatelessWidget {
             gridData: FlGridData(
               show: true,
               drawVerticalLine: false,
-              getDrawingHorizontalLine: (value) => FlLine(
-                color: Colors.grey.withOpacity(0.1),
-                strokeWidth: 1,
-              ),
+              getDrawingHorizontalLine: (value) =>
+                  FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
             ),
             titlesData: const FlTitlesData(show: false),
             borderData: FlBorderData(show: false),
@@ -44,7 +42,9 @@ class MainChart extends StatelessWidget {
                     toY: e.value,
                     color: Colors.orange.shade400,
                     width: 16,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(4),
+                    ),
                   ),
                 ],
               );
@@ -56,7 +56,9 @@ class MainChart extends StatelessWidget {
         LineChart(
           LineChartData(
             maxY: 6,
-            gridData: const FlGridData(show: false), // Hide grid to avoid double lines
+            gridData: const FlGridData(
+              show: false,
+            ), // Hide grid to avoid double lines
             titlesData: const FlTitlesData(show: false),
             borderData: FlBorderData(show: false),
             lineBarsData: [
@@ -67,12 +69,13 @@ class MainChart extends StatelessWidget {
                 barWidth: 3,
                 dotData: FlDotData(
                   show: true,
-                  getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                    radius: 3,
-                    color: const Color(0xFF0066FF),
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  ),
+                  getDotPainter: (spot, percent, barData, index) =>
+                      FlDotCirclePainter(
+                        radius: 3,
+                        color: const Color(0xFF0066FF),
+                        strokeWidth: 2,
+                        strokeColor: Colors.white,
+                      ),
                 ),
               ),
             ],

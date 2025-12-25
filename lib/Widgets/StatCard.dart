@@ -74,7 +74,7 @@ class StatCard extends StatelessWidget {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

@@ -10,21 +10,21 @@ class ProjectTable extends StatelessWidget {
       "location": "Mumbai",
       "status": "Ongoing",
       "color": const Color(0xFF4ADE80),
-      "hasDot": false
+      "hasDot": false,
     },
     {
       "name": "Skyline Heights",
       "location": "Delhi",
       "status": "Completed",
       "color": const Color(0xFF22C55E),
-      "hasDot": false
+      "hasDot": false,
     },
     {
       "name": "Sunrise Plaza",
       "location": "Bangalore",
       "status": "Pending",
       "color": Colors.orange,
-      "hasDot": true
+      "hasDot": true,
     },
   ];
 
@@ -56,43 +56,53 @@ class ProjectTable extends StatelessWidget {
   }
 
   // Your exact helper method logic preserved
-  DataRow _projectRow(String name, String loc, String status, Color color, {bool hasDot = false}) {
-    return DataRow(cells: [
-      DataCell(Text(name, style: const TextStyle(fontWeight: FontWeight.bold))),
-      DataCell(Text(loc)),
-      DataCell(
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color, 
-            borderRadius: BorderRadius.circular(20)
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (hasDot) ...[
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
+  DataRow _projectRow(
+    String name,
+    String loc,
+    String status,
+    Color color, {
+    bool hasDot = false,
+  }) {
+    return DataRow(
+      cells: [
+        DataCell(
+          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+        DataCell(Text(loc)),
+        DataCell(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasDot) ...[
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  status,
+                  style: const TextStyle(
                     color: Colors.white,
-                    shape: BoxShape.circle,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 6),
               ],
-              Text(
-                status,
-                style: const TextStyle(
-                  color: Colors.white, 
-                  fontSize: 10, 
-                  fontWeight: FontWeight.bold
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    ]);
+      ],
+    );
   }
 }

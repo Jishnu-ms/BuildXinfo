@@ -33,9 +33,7 @@ class StatCardRow extends StatelessWidget {
         return Expanded(
           child: Padding(
             // Adds 20px spacing between cards, but 0 after the last card
-            padding: EdgeInsets.only(
-              right: index == stats.length - 1 ? 0 : 20,
-            ),
+            padding: EdgeInsets.only(right: index == stats.length - 1 ? 0 : 20),
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -58,11 +56,7 @@ class StatCardRow extends StatelessWidget {
                       color: data.bgColor,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      data.icon,
-                      color: data.iconColor,
-                      size: 28,
-                    ),
+                    child: Icon(data.icon, color: data.iconColor, size: 28),
                   ),
                   const SizedBox(width: 16),
                   // Text Content

@@ -5,8 +5,8 @@ class SectionHeader extends StatelessWidget {
   final bool showLegend;
 
   const SectionHeader({
-    super.key, 
-    required this.title, 
+    super.key,
+    required this.title,
     this.showLegend = false,
   });
 
@@ -16,7 +16,7 @@ class SectionHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          title, 
+          title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         if (showLegend)
@@ -26,7 +26,7 @@ class SectionHeader extends StatelessWidget {
               const SizedBox(width: 10),
               _legendItem("Actual", Colors.orange),
             ],
-          )
+          ),
       ],
     );
   }
@@ -36,18 +36,15 @@ class SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 10, 
-          height: 10, 
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(
-            color: color, 
+            color: color,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          label, 
-          style: const TextStyle(fontSize: 10, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
     );
   }
