@@ -2,11 +2,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const String apiBaseUrl = "https://mini-2ooh.onrender.com";
+// ⚠️ If Android Emulator → use http://10.0.2.2:8000
+// ⚠️ If Web / Desktop → use http://127.0.0.1:8000
+const String apiBaseUrl = "https://bulildxinfo-dnn.onrender.com";
 
 void main() {
-  runApp(const MaterialApp(
-    home: UserCostEstimationPage(),
+  runApp(MaterialApp(
+    theme: ThemeData(
+      primarySwatch: Colors.blue,
+      useMaterial3: true,
+      fontFamily: 'Roboto',
+    ),
+    home: const UserCostEstimationPage(),
     debugShowCheckedModeBanner: false,
   ));
 }
@@ -19,42 +26,47 @@ class UserCostEstimationPage extends StatefulWidget {
 }
 
 class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
-  final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _areaController = TextEditingController();
-
-  String _selectedLocation = 'Urban';
-  String _selectedMaterial = 'Basic';
-  int _selectedYear = 2024;
-  int _floorCount = 1;
+  final TextEditingController _workerCostController = TextEditingController(text: "500");
+  
   bool _isLoading = false;
 
-  double costPerSqft = 0;
-  double totalCost = 0;
-  double materialCost = 0;
-  double labourCost = 0;
-  double miscCost = 0;
-  double timeMonths = 0;
+  // --- Hybrid API Specific State Variables ---
+  String _buildingType = 'Residential'; // x1
+  int _roomsPerFloor = 3;               // x2
+  String _facilities = 'None';          // x3
+  int _floors = 1;                      // x5
+  String _location = 'Urban';           // Location factor
 
-  final List<String> _materials = ['Basic', 'Standard', 'Premium'];
+  // Material Qualities
+  String _cement = 'Standard';
+  String _steel = 'Standard';
+  String _bricks = 'Standard';
+  String _sand = 'Standard';
+  String _aggregate = 'Standard';
 
-  final Map<String, int> _locationIndex = {
-    'Rural': 1,
-    'Semi-Urban': 2,
-    'Sub-Urban': 3,
-    'Urban': 4
-  };
+  // Work Qualities
+  String _flooring = 'Standard';
+  String _painting = 'Standard';
+  String _sanitary = 'Standard';
+  String _electrical = 'Standard';
+  String _kitchen = 'Standard';
+  String _contractor = 'Standard';
 
-  final Map<String, int> _materialIndex = {
-    'Basic': 0,
-    'Standard': 1,
-    'Premium': 2
-  };
+  // --- Result State Variables ---
+  double totalCost = 0, materialCost = 0, labourCost = 0, adjustedBase = 0, timeMonths = 0, baseMlCost = 0;
+
+  final List<String> _qualities = ['Basic', 'Standard', 'Premium'];
+  final List<String> _locations = ['Rural', 'Urban', 'Metro'];
+  final List<String> _buildingTypes = ['Residential', 'Commercial'];
+  final List<String> _facilitiesList = ['None', 'Lift', 'Garage', 'Both'];
 
   Future<void> _calculateEstimation() async {
     final area = double.tryParse(_areaController.text.trim());
+    final workerCost = double.tryParse(_workerCostController.text.trim());
 
     if (area == null || area <= 0) {
-      _showSnackBar("Enter a valid built-up area");
+      _showSnackBar("Please enter a valid area");
       return;
     }
 
@@ -65,159 +77,154 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
         Uri.parse("$apiBaseUrl/predict"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "Total_Built_up_Area": area,
-          "Material_Category": _materialIndex[_selectedMaterial],
-          "Location_Index": _locationIndex[_selectedLocation],
-          "Year": _selectedYear,
-          "Quarter": 2
+          // ML & Rule Engine Logic Inputs
+          "building_type": _buildingType.toLowerCase(),
+          "special_facilities": _facilities.toLowerCase(),
+          "rooms_per_floor": _roomsPerFloor,
+          "built_up_area_sqft": area,
+          "no_of_floors": _floors,
+          "worker_cost": workerCost ?? 500.0,
+          "location": _location.toLowerCase(),
+
+          // Quality Selectors
+          "cement_quality": _cement.toLowerCase(),
+          "steel_quality": _steel.toLowerCase(),
+          "bricks_quality": _bricks.toLowerCase(),
+          "sand_quality": _sand.toLowerCase(),
+          "aggregate_quality": _aggregate.toLowerCase(),
+          "flooring_quality": _flooring.toLowerCase(),
+          "painting_quality": _painting.toLowerCase(),
+          "sanitary_quality": _sanitary.toLowerCase(),
+          "electrical_quality": _electrical.toLowerCase(),
+          "kitchen_quality": _kitchen.toLowerCase(),
+          "contractor_quality": _contractor.toLowerCase(),
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         setState(() {
-          costPerSqft = (data["cost_per_sqft_inr"] ?? 0).toDouble();
-          totalCost = (data["predicted_total_cost"] ?? 0).toDouble();
+          baseMlCost = (data["base_ml_cost"] ?? 0).toDouble();
+          adjustedBase = (data["adjusted_base_cost"] ?? 0).toDouble();
           materialCost = (data["material_cost"] ?? 0).toDouble();
           labourCost = (data["labour_cost"] ?? 0).toDouble();
-          miscCost = (data["misc_cost"] ?? 0).toDouble();
-          timeMonths = (data["time_months"] ?? 0).toDouble();
+          totalCost = (data["final_estimated_cost"] ?? 0).toDouble();
+          timeMonths = (data["estimated_time_months"] ?? 0).toDouble();
         });
       } else {
-        _showSnackBar("Server error (${response.statusCode})");
+        _showSnackBar("Server Error: ${response.body}");
       }
     } catch (e) {
-      _showSnackBar("Connection failed (cold start?)");
+      _showSnackBar("Connection failed. Check if Backend is running.");
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _resetAll() {
-    setState(() {
-      costPerSqft = 0;
-      totalCost = 0;
-      materialCost = 0;
-      labourCost = 0;
-      miscCost = 0;
-      timeMonths = 0;
-    });
-  }
-
   void _showSnackBar(String msg) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEDF2F7),
+      backgroundColor: const Color(0xFFF7FAFC),
+      
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "New Cost Estimation",
-              style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748)),
-            ),
-            const Text(
-              "Early-stage construction cost prediction",
-              style: TextStyle(color: Color(0xFF718096), fontSize: 16),
-            ),
-            const SizedBox(height: 32),
-            Row(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1100),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Left Column: Inputs
                 Expanded(
                   flex: 3,
                   child: Column(
                     children: [
-                      _buildProjectInfoCard(),
-                      const SizedBox(height: 24),
-                      _buildEstimationParametersCard(),
+                      _buildMainSpecsCard(),
+                      const SizedBox(height: 20),
+                      _buildCollapsibleSection("Material Qualities", [
+                        _selectionRow("Cement", _cement, (v) => setState(() => _cement = v)),
+                        _selectionRow("Steel", _steel, (v) => setState(() => _steel = v)),
+                        _selectionRow("Bricks", _bricks, (v) => setState(() => _bricks = v)),
+                        _selectionRow("Sand", _sand, (v) => setState(() => _sand = v)),
+                        _selectionRow("Aggregate", _aggregate, (v) => setState(() => _aggregate = v)),
+                      ]),
+                      const SizedBox(height: 20),
+                      _buildCollapsibleSection("Work & Finishing", [
+                        _selectionRow("Flooring", _flooring, (v) => setState(() => _flooring = v)),
+                        _selectionRow("Painting", _painting, (v) => setState(() => _painting = v)),
+                        _selectionRow("Sanitary", _sanitary, (v) => setState(() => _sanitary = v)),
+                        _selectionRow("Electrical", _electrical, (v) => setState(() => _electrical = v)),
+                        _selectionRow("Kitchen", _kitchen, (v) => setState(() => _kitchen = v)),
+                        _selectionRow("Contractor", _contractor, (v) => setState(() => _contractor = v)),
+                      ]),
                     ],
                   ),
                 ),
                 const SizedBox(width: 24),
-                Expanded(flex: 2, child: _buildResultCard()),
+                // Right Column: Results
+                Expanded(
+                  flex: 2,
+                  child: _buildResultCard(),
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProjectInfoCard() {
-    return _CardBase(
-      title: "Project Information",
+  Widget _buildMainSpecsCard() {
+    return _CardWrapper(
+      title: "Project Configuration",
       child: Column(
         children: [
           Row(
             children: [
-              Expanded(
-                  child: _customTextField(
-                      "Project Name *",
-                      _projectNameController,
-                      "Enter project name")),
+              Expanded(child: _buildDropdown("Building Type", _buildingType, _buildingTypes, (v) => setState(() => _buildingType = v!))),
               const SizedBox(width: 16),
-              Expanded(
-                  child: _customDropdown(
-                      "Location *",
-                      _selectedLocation,
-                      _locationIndex.keys.toList(),
-                      (v) => setState(() => _selectedLocation = v!))),
+              Expanded(child: _buildDropdown("Special Facilities", _facilities, _facilitiesList, (v) => setState(() => _facilities = v!))),
             ],
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                  child: _customTextField(
-                      "Built-up Area (sqft) *",
-                      _areaController,
-                      "Enter area",
-                      isNumber: true,
-                      suffixIcon: Icons.apartment)),
-              const SizedBox(width: 16),
-              Expanded(child: _floorStepper()),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEstimationParametersCard() {
-    return _CardBase(
-      title: "Estimation Parameters",
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _customDropdown(
-              "Material Category",
-              _selectedMaterial,
-              _materials,
-              (v) => setState(() => _selectedMaterial = v!),
-              icon: Icons.layers_outlined),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: const Color(0xFFEBF4FF),
-                borderRadius: BorderRadius.circular(8)),
-            child: Text(
-              "Location Index: ${_locationIndex[_selectedLocation]} ($_selectedLocation)",
-              style: const TextStyle(
-                  color: Color(0xFF2B6CB0),
-                  fontWeight: FontWeight.w600),
+          TextField(
+            controller: _areaController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: "Total Built-up Area (sqft)",
+              prefixIcon: const Icon(Icons.square_foot),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _workerCostController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Avg Worker Cost/Day",
+                    prefixIcon: const Icon(Icons.payments),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(child: _buildDropdown("Location", _location, _locations, (v) => setState(() => _location = v!))),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: _buildDropdown("No. of Floors", _floors, [1, 2, 3, 4, 5, 10], (v) => setState(() => _floors = v!))),
+              const SizedBox(width: 16),
+              Expanded(child: _buildDropdown("Rooms Per Floor", _roomsPerFloor, [1, 2, 3, 4, 5, 6, 8], (v) => setState(() => _roomsPerFloor = v!))),
+            ],
           ),
         ],
       ),
@@ -225,199 +232,135 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
   }
 
   Widget _buildResultCard() {
-    return _CardBase(
-      title: "Estimated Cost",
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A202C),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15)],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Final Estimated Cost",
-              style: TextStyle(
-                  color: Color(0xFF2D3748),
-                  fontWeight: FontWeight.w500)),
-          Text("₹ ${totalCost.toStringAsFixed(0)}",
-              style: const TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2B6CB0))),
-          const Divider(height: 32),
-          _resultRow("Material Cost", "₹ ${materialCost.toStringAsFixed(0)}"),
-          _resultRow("Labour Cost", "₹ ${labourCost.toStringAsFixed(0)}"),
-          _resultRow("Misc Cost", "₹ ${miscCost.toStringAsFixed(0)}"),
-          _resultRow("Cost / sqft", "₹ ${costPerSqft.toStringAsFixed(2)}"),
-          _resultRow(
-              "Time Required", "${timeMonths.toStringAsFixed(1)} Months"),
+          const Text("FINAL ESTIMATED COST", style: TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1.2)),
+          const SizedBox(height: 8),
+          Text("₹ ${totalCost.toStringAsFixed(0)}", 
+               style: const TextStyle(color: Colors.greenAccent, fontSize: 32, fontWeight: FontWeight.bold)),
+          const Divider(color: Colors.white24, height: 32),
+          _resultRow("ML Base Prediction", baseMlCost),
+          _resultRow("Adjusted Base (Hybrid)", adjustedBase),
+          _resultRow("Material Total", materialCost),
+          _resultRow("Labour & Finishing", labourCost),
+          const Divider(color: Colors.white24, height: 32),
+          _resultRow("Est. Completion Time", timeMonths, isTime: true),
           const SizedBox(height: 32),
-          Row(
-            children: [
-              TextButton(
-                  onPressed: _resetAll,
-                  child: const Text("Reset",
-                      style: TextStyle(color: Color(0xFF718096)))),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _calculateEstimation,
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3182CE),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 18),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8))),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text("Estimate Cost",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _calculateEstimation,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 5,
               ),
-            ],
-          )
+              child: _isLoading 
+                ? const CircularProgressIndicator(color: Colors.white) 
+                : const Text("CALCULATE NOW", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _resultRow(String label, String value) {
+  // --- Helper Widgets (Reusable) ---
+
+  Widget _buildCollapsibleSection(String title, List<Widget> children) {
+    return _CardWrapper(title: title, child: Column(children: children));
+  }
+
+  Widget _selectionRow(String label, String currentVal, Function(String) onSelect) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: const TextStyle(color: Color(0xFF718096))),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748))),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Wrap(
+            spacing: 4,
+            children: _qualities.map((q) {
+              bool isSelected = currentVal == q;
+              return ChoiceChip(
+                label: Text(q, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black)),
+                selected: isSelected,
+                onSelected: (bool selected) { if (selected) onSelect(q); },
+                selectedColor: Colors.blue,
+                showCheckmark: false,
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
   }
 
-  Widget _customTextField(String label, TextEditingController controller,
-      String hint,
-      {bool isNumber = false, IconData? suffixIcon}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF4A5568))),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType:
-              isNumber ? TextInputType.number : TextInputType.text,
-          decoration: InputDecoration(
-            hintText: hint,
-            suffixIcon: suffixIcon != null
-                ? Icon(suffixIcon,
-                    color: const Color(0xFF3182CE), size: 20)
-                : null,
-            filled: true,
-            fillColor: const Color(0xFFF7FAFC),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8)),
+  Widget _resultRow(String label, double value, {bool isTime = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+          Text(
+            isTime ? "${value.toStringAsFixed(1)} Mo" : "₹ ${value.toStringAsFixed(0)}",
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _customDropdown(String label, String value, List<String> items,
-      Function(String?) onChanged,
-      {IconData? icon}) {
+  Widget _buildDropdown<T>(String label, T value, List<T> items, Function(T?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF4A5568))),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+        DropdownButton<T>(
           value: value,
-          items: items
-              .map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
+          isExpanded: true,
           onChanged: onChanged,
-          decoration: InputDecoration(
-            prefixIcon: icon != null
-                ? Icon(icon,
-                    color: const Color(0xFF3182CE), size: 20)
-                : null,
-            filled: true,
-            fillColor: const Color(0xFFF7FAFC),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _floorStepper() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Number of Floors *",
-            style: TextStyle(
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF4A5568))),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<int>(
-          value: _floorCount,
-          items: [1, 2, 3, 4]
-              .map((e) => DropdownMenuItem(
-                  value: e, child: Text(e.toString())))
-              .toList(),
-          onChanged: (v) => setState(() => _floorCount = v!),
-          decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFF7FAFC),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8))),
+          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e.toString()))).toList(),
         ),
       ],
     );
   }
 }
 
-class _CardBase extends StatelessWidget {
+class _CardWrapper extends StatelessWidget {
   final String title;
   final Widget child;
-  const _CardBase({required this.title, required this.child});
+  const _CardWrapper({required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10)
-          ]),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748))),
-          const Divider(height: 32),
+          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+          const Divider(height: 25),
           child,
         ],
       ),
     );
   }
 }
-
