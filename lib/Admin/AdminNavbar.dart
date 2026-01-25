@@ -1,8 +1,10 @@
 import 'package:buildxinfo/Admin/Pages/AdminProjectsPage%20.dart';
 import 'package:buildxinfo/Admin/Pages/AdminUsersPage.dart';
+import 'package:buildxinfo/LoginPage.dart';
 import 'package:buildxinfo/Widgets/CustomSidebarButton.dart';
 import 'package:buildxinfo/Widgets/SideNavItem.dart';
 import 'package:buildxinfo/Widgets/TopNavBar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:buildxinfo/Admin/Pages/AdminDashboardPage.dart';
@@ -32,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-     AdminDashboardPage(),
+    AdminDashboardPage(),
     const AdminProjectsPage(),
     const AdminUsersPage(),
   ];
@@ -95,9 +97,20 @@ class _MainScreenState extends State<MainScreen> {
                     icon: Icons.logout_rounded,
                     color: Colors.red,
                     borderColor: Colors.black26,
-                    onTap: () {
-                      // Add your logout logic here
-                      print("User logged out");
+                    onTap: () async {
+                      // 1️⃣ Sign out from Firebase (MOST IMPORTANT)
+                      await FirebaseAuth.instance.signOut();
+
+                      // 2️⃣ Navigate to Login and clear navigation stack
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                        (route) => false,
+                      );
+
+                      debugPrint("User logged out and redirected to Login");
                     },
                   ),
                 ),

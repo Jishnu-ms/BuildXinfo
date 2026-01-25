@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// ⚠️ If Android Emulator → use http://10.0.2.2:8000
-// ⚠️ If Web / Desktop → use http://127.0.0.1:8000
 const String apiBaseUrl = "https://bulildxinfo-dnn.onrender.com";
 
 void main() {
@@ -26,26 +26,25 @@ class UserCostEstimationPage extends StatefulWidget {
 }
 
 class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
+  final TextEditingController _projectNameController = TextEditingController();
   final TextEditingController _areaController = TextEditingController();
-  final TextEditingController _workerCostController = TextEditingController(text: "500");
-  
+  final TextEditingController _workerCostController =
+      TextEditingController(text: "500");
+
   bool _isLoading = false;
 
-  // --- Hybrid API Specific State Variables ---
-  String _buildingType = 'Residential'; // x1
-  int _roomsPerFloor = 3;               // x2
-  String _facilities = 'None';          // x3
-  int _floors = 1;                      // x5
-  String _location = 'Urban';           // Location factor
+  String _buildingType = 'Residential';
+  int _roomsPerFloor = 3;
+  String _facilities = 'None';
+  int _floors = 1;
+  String _location = 'Urban';
 
-  // Material Qualities
   String _cement = 'Standard';
   String _steel = 'Standard';
   String _bricks = 'Standard';
   String _sand = 'Standard';
   String _aggregate = 'Standard';
 
-  // Work Qualities
   String _flooring = 'Standard';
   String _painting = 'Standard';
   String _sanitary = 'Standard';
@@ -53,8 +52,12 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
   String _kitchen = 'Standard';
   String _contractor = 'Standard';
 
-  // --- Result State Variables ---
-  double totalCost = 0, materialCost = 0, labourCost = 0, adjustedBase = 0, timeMonths = 0, baseMlCost = 0;
+  double totalCost = 0,
+      materialCost = 0,
+      labourCost = 0,
+      adjustedBase = 0,
+      timeMonths = 0,
+      baseMlCost = 0;
 
   final List<String> _qualities = ['Basic', 'Standard', 'Premium'];
   final List<String> _locations = ['Rural', 'Urban', 'Metro'];
@@ -64,9 +67,14 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
   Future<void> _calculateEstimation() async {
     final area = double.tryParse(_areaController.text.trim());
     final workerCost = double.tryParse(_workerCostController.text.trim());
+    final projectName = _projectNameController.text.trim();
 
+    if (projectName.isEmpty) {
+      _showSnackBar("Enter project name");
+      return;
+    }
     if (area == null || area <= 0) {
-      _showSnackBar("Please enter a valid area");
+      _showSnackBar("Invalid area");
       return;
     }
 
@@ -77,16 +85,13 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
         Uri.parse("$apiBaseUrl/predict"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          // ML & Rule Engine Logic Inputs
           "building_type": _buildingType.toLowerCase(),
           "special_facilities": _facilities.toLowerCase(),
           "rooms_per_floor": _roomsPerFloor,
           "built_up_area_sqft": area,
           "no_of_floors": _floors,
-          "worker_cost": workerCost ?? 500.0,
+          "worker_cost": workerCost ?? 500,
           "location": _location.toLowerCase(),
-
-          // Quality Selectors
           "cement_quality": _cement.toLowerCase(),
           "steel_quality": _steel.toLowerCase(),
           "bricks_quality": _bricks.toLowerCase(),
@@ -103,6 +108,7 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+
         setState(() {
           baseMlCost = (data["base_ml_cost"] ?? 0).toDouble();
           adjustedBase = (data["adjusted_base_cost"] ?? 0).toDouble();
@@ -111,25 +117,47 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
           totalCost = (data["final_estimated_cost"] ?? 0).toDouble();
           timeMonths = (data["estimated_time_months"] ?? 0).toDouble();
         });
+
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .collection('projects')
+              .add({
+            "projectName": projectName,
+            "buildingType": _buildingType,
+            "location": _location,
+            "floors": _floors,
+            "areaSqft": area,
+            "totalCost": totalCost,
+            "materialCost": materialCost,
+            "labourCost": labourCost,
+            "baseMlCost": baseMlCost,
+            "adjustedBase": adjustedBase,
+            "estimatedTimeMonths": timeMonths,
+            "createdAt": FieldValue.serverTimestamp(),
+          });
+        }
       } else {
-        _showSnackBar("Server Error: ${response.body}");
+        _showSnackBar("Server error");
       }
-    } catch (e) {
-      _showSnackBar("Connection failed. Check if Backend is running.");
+    } catch (_) {
+      _showSnackBar("Connection failed");
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   void _showSnackBar(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFC),
-      
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Center(
@@ -138,7 +166,6 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left Column: Inputs
                 Expanded(
                   flex: 3,
                   child: Column(
@@ -165,11 +192,7 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
                   ),
                 ),
                 const SizedBox(width: 24),
-                // Right Column: Results
-                Expanded(
-                  flex: 2,
-                  child: _buildResultCard(),
-                ),
+                Expanded(flex: 2, child: _buildResultCard()),
               ],
             ),
           ),
@@ -183,6 +206,15 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
       title: "Project Configuration",
       child: Column(
         children: [
+          TextField(
+            controller: _projectNameController,
+            decoration: InputDecoration(
+              labelText: "Project Name",
+              prefixIcon: const Icon(Icons.apartment),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 20),
           Row(
             children: [
               Expanded(child: _buildDropdown("Building Type", _buildingType, _buildingTypes, (v) => setState(() => _buildingType = v!))),
@@ -221,9 +253,9 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildDropdown("No. of Floors", _floors, [1, 2, 3, 4, 5, 10], (v) => setState(() => _floors = v!))),
+              Expanded(child: _buildDropdown("No. of Floors", _floors, [1,2,3,4,5,10], (v) => setState(() => _floors = v!))),
               const SizedBox(width: 16),
-              Expanded(child: _buildDropdown("Rooms Per Floor", _roomsPerFloor, [1, 2, 3, 4, 5, 6, 8], (v) => setState(() => _roomsPerFloor = v!))),
+              Expanded(child: _buildDropdown("Rooms Per Floor", _roomsPerFloor, [1,2,3,4,5,6,8], (v) => setState(() => _roomsPerFloor = v!))),
             ],
           ),
         ],
@@ -242,13 +274,13 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("FINAL ESTIMATED COST", style: TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1.2)),
+          const Text("FINAL ESTIMATED COST", style: TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 8),
-          Text("₹ ${totalCost.toStringAsFixed(0)}", 
-               style: const TextStyle(color: Colors.greenAccent, fontSize: 32, fontWeight: FontWeight.bold)),
+          Text("₹ ${totalCost.toStringAsFixed(0)}",
+              style: const TextStyle(color: Colors.greenAccent, fontSize: 32, fontWeight: FontWeight.bold)),
           const Divider(color: Colors.white24, height: 32),
           _resultRow("ML Base Prediction", baseMlCost),
-          _resultRow("Adjusted Base (Hybrid)", adjustedBase),
+          _resultRow("Adjusted Base", adjustedBase),
           _resultRow("Material Total", materialCost),
           _resultRow("Labour & Finishing", labourCost),
           const Divider(color: Colors.white24, height: 32),
@@ -259,15 +291,9 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
             height: 55,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _calculateEstimation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 5,
-              ),
-              child: _isLoading 
-                ? const CircularProgressIndicator(color: Colors.white) 
-                : const Text("CALCULATE NOW", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("CALCULATE NOW", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -275,28 +301,25 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
     );
   }
 
-  // --- Helper Widgets (Reusable) ---
-
-  Widget _buildCollapsibleSection(String title, List<Widget> children) {
-    return _CardWrapper(title: title, child: Column(children: children));
-  }
+  Widget _buildCollapsibleSection(String title, List<Widget> children) =>
+      _CardWrapper(title: title, child: Column(children: children));
 
   Widget _selectionRow(String label, String currentVal, Function(String) onSelect) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(label),
           Wrap(
             spacing: 4,
             children: _qualities.map((q) {
-              bool isSelected = currentVal == q;
+              bool selected = q == currentVal;
               return ChoiceChip(
-                label: Text(q, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black)),
-                selected: isSelected,
-                onSelected: (bool selected) { if (selected) onSelect(q); },
+                label: Text(q, style: TextStyle(fontSize: 11, color: selected ? Colors.white : Colors.black)),
+                selected: selected,
                 selectedColor: Colors.blue,
+                onSelected: (_) => onSelect(q),
                 showCheckmark: false,
               );
             }).toList(),
@@ -312,11 +335,9 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-          Text(
-            isTime ? "${value.toStringAsFixed(1)} Mo" : "₹ ${value.toStringAsFixed(0)}",
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white70)),
+          Text(isTime ? "${value.toStringAsFixed(1)} Mo" : "₹ ${value.toStringAsFixed(0)}",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -326,7 +347,7 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
         DropdownButton<T>(
           value: value,
           isExpanded: true,
