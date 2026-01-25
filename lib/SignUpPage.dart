@@ -35,8 +35,7 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _loading = true);
 
     try {
-      final cred =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
@@ -45,11 +44,11 @@ class _SignUpPageState extends State<SignUpPage> {
           .collection('users')
           .doc(cred.user!.uid)
           .set({
-        "name": _nameController.text.trim(),
-        "email": _emailController.text.trim(),
-        "role": _selectedRole,
-        "createdAt": FieldValue.serverTimestamp(),
-      });
+            "name": _nameController.text.trim(),
+            "email": _emailController.text.trim(),
+            "role": _selectedRole,
+            "createdAt": FieldValue.serverTimestamp(),
+          });
 
       Navigator.pushReplacement(
         context,
@@ -75,11 +74,7 @@ class _SignUpPageState extends State<SignUpPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFCBD5FF),
-              Color(0xFFDDE3FF),
-              Color(0xFFEFF2FF),
-            ],
+            colors: [Color(0xFFCBD5FF), Color(0xFFDDE3FF), Color(0xFFEFF2FF)],
           ),
         ),
         child: Center(
@@ -105,8 +100,10 @@ class _SignUpPageState extends State<SignUpPage> {
                             // Logo
                             Row(
                               children: const [
-                                Icon(Icons.home_work_rounded,
-                                    color: Color(0xFF4F6EF7)),
+                                Icon(
+                                  Icons.home_work_rounded,
+                                  color: Color(0xFF4F6EF7),
+                                ),
                                 SizedBox(width: 8),
                                 Text(
                                   "BuildXinfo",
@@ -173,14 +170,20 @@ class _SignUpPageState extends State<SignUpPage> {
                               value: _selectedRole,
                               items: const [
                                 DropdownMenuItem(
-                                    value: "user", child: Text("User")),
+                                  value: "user",
+                                  child: Text("User"),
+                                ),
                                 DropdownMenuItem(
-                                    value: "admin", child: Text("Admin")),
+                                  value: "admin",
+                                  child: Text("Admin"),
+                                ),
                               ],
                               onChanged: (v) =>
                                   setState(() => _selectedRole = v!),
-                              decoration:
-                                  _inputDecoration("Select Role", Icons.person),
+                              decoration: _inputDecoration(
+                                "Select Role",
+                                Icons.person,
+                              ),
                             ),
 
                             const SizedBox(height: 24),
@@ -191,8 +194,7 @@ class _SignUpPageState extends State<SignUpPage> {
                               child: ElevatedButton(
                                 onPressed: _loading ? null : _signup,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color(0xFF4F6EF7),
+                                  backgroundColor: const Color(0xFF4F6EF7),
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -209,7 +211,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                       )
                                     : const Text(
                                         "Create Account",
-                                        style: TextStyle(fontSize: 16),
+                                         style: TextStyle(fontSize: 16,color: Colors.white),
                                       ),
                               ),
                             ),
@@ -222,7 +224,8 @@ class _SignUpPageState extends State<SignUpPage> {
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => const LoginPage()),
+                                      builder: (_) => const LoginPage(),
+                                    ),
                                   );
                                 },
                                 child: const Text(
@@ -242,19 +245,22 @@ class _SignUpPageState extends State<SignUpPage> {
 
                   // ================= RIGHT GRADIENT =================
                   Expanded(
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(28),
-                          bottomRight: Radius.circular(28),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(28),
+                        bottomRight: Radius.circular(28),
+                      ),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [Color(0xFFD8DEFF), Color(0xFFEEF1FF)],
+                          ),
                         ),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFD8DEFF),
-                            Color(0xFFEEF1FF),
-                          ],
+                        child: Image.asset(
+                          'assets/login.png',
+                          fit: BoxFit.cover, // 🔥 makes it fused edge-to-edge
                         ),
                       ),
                     ),

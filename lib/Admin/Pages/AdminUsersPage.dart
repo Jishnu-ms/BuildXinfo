@@ -1,191 +1,108 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminUsersPage extends StatelessWidget {
   const AdminUsersPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> users = [
-      {
-        "name": "Amit Sharma",
-        "email": "amit.abstract@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=amit",
-        "role": "Admin",
-        "projects": 12,
-      },
-      {
-        "name": "Priya Mehta",
-        "email": "priyalocation@orcail.com",
-        "avatar": "https://i.pravatar.cc/150?u=priya",
-        "role": "Project Manager",
-        "projects": 8,
-      },
-      {
-        "name": "Neha Singhania",
-        "email": "ivehanmalai@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=neha",
-        "role": "Project Manager",
-        "projects": 15,
-      },
-      {
-        "name": "Rahul Verma",
-        "email": "mhull.verma@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=rahul",
-        "role": "Engineer",
-        "projects": 6,
-      },
-      {
-        "name": "Karan Joshi",
-        "email": "karan.joshi@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=karan",
-        "role": "Engineer",
-        "projects": 4,
-      },
-      {
-        "name": "Abhishek Patil",
-        "email": "bhiyshborh@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=abhi",
-        "role": "Engineer",
-        "projects": 4,
-      },
-      {
-        "name": "Ananya Kapoor",
-        "email": "ananya.kapoor@gmail.com",
-        "avatar": "https://i.pravatar.cc/150?u=ananya",
-        "role": "User",
-        "projects": 2,
-      },
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Manage Users",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E293B),
-              ),
-            ),
-            const SizedBox(height: 20),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('users').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // Toolbar
-            Row(
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                "Error: ${snapshot.error}",
+                style: const TextStyle(color: Colors.red),
+              ),
+            );
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No users found"));
+          }
+
+          final users = snapshot.data!.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+
+            return {
+              "ref": doc.reference,
+              "name": data['name'] ?? 'Unnamed',
+              "email": data['email'] ?? '-',
+              "role": data['role'] ?? 'User',
+              "avatar": data['avatar'],
+              "projects": data['projectsCount'] ?? 0,
+            };
+          }).toList();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(30),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.add),
-                  label: const Text("Add New User"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1E40AF),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                const Text(
+                  "Manage Users",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2B3674),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: "Search users...",
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _dropdown("Filter: All Roles"),
-                const SizedBox(width: 12),
-                _dropdown("Sort: Latest"),
+                const SizedBox(height: 24),
+                _usersTable(context, users),
               ],
             ),
-
-            const SizedBox(height: 24),
-
-            // Users Table
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _tableHeader(),
-                  const Divider(height: 1),
-                  ...users.map(_userRow),
-                  _paginationFooter(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  // ---------------- HELPERS ----------------
+  // ================= TABLE =================
 
-  static Widget _dropdown(String text) {
+  static Widget _usersTable(
+    BuildContext context,
+    List<Map<String, dynamic>> users,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Text(text, style: const TextStyle(fontWeight: FontWeight.w500)),
-          const Icon(Icons.arrow_drop_down),
+          _tableHeader(),
+          const Divider(height: 1),
+          ...users.map((u) => _userRow(context, u)),
         ],
       ),
     );
   }
 
-  static Widget _tableHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: const [
-          Expanded(flex: 3, child: _Header("User")),
-          Expanded(flex: 2, child: _Header("Role")),
-          Expanded(flex: 1, child: _Header("Projects")),
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: _Header("Actions"),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  static Widget _tableHeader() => const Padding(
+    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    child: Row(
+      children: [
+        Expanded(flex: 3, child: Text("User", style: _headerStyle)),
+        Expanded(flex: 2, child: Text("Role", style: _headerStyle)),
+        Expanded(flex: 1, child: Text("Projects", style: _headerStyle)),
+        Expanded(flex: 2, child: Text("Actions", style: _headerStyle)),
+      ],
+    ),
+  );
 
-  static Widget _userRow(Map<String, dynamic> u) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+  static Widget _userRow(BuildContext context, Map<String, dynamic> u) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE))),
+      ),
       child: Row(
         children: [
           Expanded(
@@ -194,24 +111,25 @@ class AdminUsersPage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundImage: NetworkImage(u['avatar']),
+                  backgroundColor: Colors.grey.shade200,
+                  backgroundImage: u['avatar'] != null
+                      ? NetworkImage(u['avatar'])
+                      : null,
+                  child: u['avatar'] == null
+                      ? const Icon(Icons.person, color: Colors.grey)
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        u['name'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      Text(u['name'], style: _rowTextStyle),
                       Text(
                         u['email'],
                         style: const TextStyle(
-                          color: Colors.grey,
                           fontSize: 12,
+                          color: Colors.grey,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -222,28 +140,32 @@ class AdminUsersPage extends StatelessWidget {
             ),
           ),
           Expanded(
-  flex: 2,
-  child: Align(
-    alignment: Alignment.centerLeft,
-    child: _roleBadge(u['role']),
-  ),
-),
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _roleBadge(u['role']),
+            ),
+          ),
 
           Expanded(
             flex: 1,
-            child: Text(
-              "${u['projects']}",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            child: Text("${u['projects']}", style: _rowTextStyle),
           ),
           Expanded(
-            flex: 1,
+            flex: 2,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _action(Icons.edit, Colors.blue),
-                const SizedBox(width: 8),
-                _action(Icons.delete, Colors.red),
+                _actionIcon(
+                  Icons.edit,
+                  Colors.blue,
+                  onTap: () => _showEditUserSheet(context, u),
+                ),
+                const SizedBox(width: 10),
+                _actionIcon(
+                  Icons.delete,
+                  Colors.orange,
+                  onTap: () => _showDeleteUserSheet(context, u),
+                ),
               ],
             ),
           ),
@@ -252,83 +174,231 @@ class AdminUsersPage extends StatelessWidget {
     );
   }
 
-  static Widget _paginationFooter() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          Text("1 - 7 of 50 users", style: TextStyle(color: Colors.grey)),
-          Text("◀ 1 2 … 8 ▶"),
-        ],
-      ),
+  // ================= EDIT USER =================
+
+  static void _showEditUserSheet(BuildContext context, Map<String, dynamic> u) {
+    String selectedRole = u['role'] ?? "User";
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _dragHandle(),
+                  const Text(
+                    "Edit User Role",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2B3674),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 10,
+                    children: ["Admin", "Project Manager", "Engineer", "User"]
+                        .map((r) {
+                          final color = _roleColor(r);
+                          return ChoiceChip(
+                            label: Text(r),
+                            selected: selectedRole == r,
+                            selectedColor: color,
+                            backgroundColor: color.withOpacity(0.15),
+                            labelStyle: TextStyle(
+                              color: selectedRole == r ? Colors.white : color,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (_) =>
+                                setModalState(() => selectedRole = r),
+                            showCheckmark: false,
+                          );
+                        })
+                        .toList(),
+                  ),
+                  const SizedBox(height: 28),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await u['ref'].update({
+                          "role": selectedRole,
+                          "updatedAt": FieldValue.serverTimestamp(),
+                        });
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2B3674),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Save Changes",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
+
+  // ================= DELETE USER =================
+
+  static void _showDeleteUserSheet(
+    BuildContext context,
+    Map<String, dynamic> u,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _dragHandle(),
+              const Text(
+                "Delete User?",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2B3674),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Are you sure you want to delete ${u['name']}?\nThis cannot be undone.",
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Cancel"),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await u['ref'].delete();
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                      ),
+                      child: const Text(
+                        "Delete",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ================= UI HELPERS =================
+
+  static Widget _dragHandle() => Center(
+    child: Container(
+      width: 40,
+      height: 4,
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade300,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    ),
+  );
 
   static Widget _roleBadge(String role) {
-    Color color;
-    
+    final color = _roleColor(role);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        role,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  static Color _roleColor(String role) {
     switch (role) {
       case "Admin":
-        color = const Color(0xFF2563EB);
-        break;
+        return const Color(0xFF2563EB);
       case "Project Manager":
-        color = const Color(0xFFD97706);
-        break;
+        return const Color(0xFFD97706);
       case "Engineer":
-        color = const Color(0xFF059669);
-        break;
+        return const Color(0xFF059669);
       default:
-        color = const Color(0xFF94A3B8);
+        return const Color(0xFF94A3B8);
     }
-
-    return Container(
-  padding: const EdgeInsets.symmetric(
-    horizontal: 8,   // ⬅️ reduced from 12
-    vertical: 4,     // ⬅️ reduced from 6
-  ),
-  decoration: BoxDecoration(
-    color: color,
-    borderRadius: BorderRadius.circular(16), // slightly smaller radius
-  ),
-  child: Text(
-    role,
-    style: const TextStyle(
-      color: Colors.white,
-      fontSize: 10,     // ⬅️ reduced from 11 (optional but cleaner)
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-);
-
   }
 
-  static Widget _action(IconData icon, Color color) {
-    return Container(
-      width: 32,
-      height: 32,
+  static Widget _actionIcon(
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) => InkWell(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(6),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(icon, color: Colors.white, size: 16),
-    );
-  }
-}
+      child: Icon(icon, color: color, size: 18),
+    ),
+  );
 
-// Header Text
-class _Header extends StatelessWidget {
-  final String text;
-  const _Header(this.text);
+  static const _headerStyle = TextStyle(
+    color: Colors.grey,
+    fontWeight: FontWeight.w600,
+    fontSize: 14,
+  );
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF64748B),
-      ),
-    );
-  }
+  static const _rowTextStyle = TextStyle(
+    color: Color(0xFF2B3674),
+    fontWeight: FontWeight.w500,
+  );
 }

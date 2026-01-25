@@ -63,11 +63,7 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFCBD5FF),
-              Color(0xFFDDE3FF),
-              Color(0xFFEFF2FF),
-            ],
+            colors: [Color(0xFFCBD5FF), Color(0xFFDDE3FF), Color(0xFFEFF2FF)],
           ),
         ),
         child: Center(
@@ -83,8 +79,10 @@ class _LoginPageState extends State<LoginPage> {
                 // ================= LEFT LOGIN CARD =================
                 Container(
                   width: 420,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 36,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.9),
                     borderRadius: const BorderRadius.only(
@@ -97,8 +95,10 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Row(
                         children: const [
-                          Icon(Icons.home_work_rounded,
-                              color: Color(0xFF4F6EF7)),
+                          Icon(
+                            Icons.home_work_rounded,
+                            color: Color(0xFF4F6EF7),
+                          ),
                           SizedBox(width: 8),
                           Text(
                             "BuildXinfo",
@@ -123,10 +123,7 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 6),
                       const Text(
                         "Log in to your BuildXinfo account",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
 
                       const SizedBox(height: 28),
@@ -159,9 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                             },
                             child: Text(
                               _obscure ? "Show" : "Hide",
-                              style: const TextStyle(
-                                color: Color(0xFF4F6EF7),
-                              ),
+                              style: const TextStyle(color: Color(0xFF4F6EF7)),
                             ),
                           ),
                           filled: true,
@@ -214,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
                                 )
                               : const Text(
                                   "Log In",
-                                  style: TextStyle(fontSize: 16),
+                                  style: TextStyle(fontSize: 16,color: Colors.white),
                                 ),
                         ),
                       ),
@@ -227,14 +222,13 @@ class _LoginPageState extends State<LoginPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (_) => const SignUpPage()),
+                                builder: (_) => const SignUpPage(),
+                              ),
                             );
                           },
                           child: const Text(
                             "Don't have an account? Sign Up",
-                            style: TextStyle(
-                              color: Color(0xFF4F6EF7),
-                            ),
+                            style: TextStyle(color: Color(0xFF4F6EF7)),
                           ),
                         ),
                       ),
@@ -243,19 +237,22 @@ class _LoginPageState extends State<LoginPage> {
                 ),
 
                 Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(28),
-                        bottomRight: Radius.circular(28),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(28),
+                      bottomRight: Radius.circular(28),
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFD8DEFF), Color(0xFFEEF1FF)],
+                        ),
                       ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFD8DEFF),
-                          Color(0xFFEEF1FF),
-                        ],
+                      child: Image.asset(
+                        'assets/login.png',
+                        fit: BoxFit.cover, // 🔥 makes it fused edge-to-edge
                       ),
                     ),
                   ),
