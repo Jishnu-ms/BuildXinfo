@@ -2,10 +2,93 @@
 
 
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+ class ActivityList extends StatelessWidget {
+  const ActivityList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collectionGroup('projects')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(12),
+            child: CircularProgressIndicator(strokeWidth: 2),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+
+        if (docs.isEmpty) {
+          return const Text(
+            "No recent activity",
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          );
+        }
+
+        // ✅ Sort safely in Dart (NO Firestore orderBy bugs)
+        docs.sort((a, b) {
+          final ta =
+              (a.data() as Map<String, dynamic>)['updatedAt'] as Timestamp?;
+          final tb =
+              (b.data() as Map<String, dynamic>)['updatedAt'] as Timestamp?;
+
+          if (ta == null && tb == null) return 0;
+          if (ta == null) return 1;
+          if (tb == null) return -1;
+          return tb.compareTo(ta);
+        });
+
+        final recent = docs.take(5).toList();
+
+        return Column(
+          children: recent.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+
+            final user = data['updatedBy'] ?? 'User';
+            final project = data['projectName'] ?? 'Project';
+            final status = data['status'] ?? 'updated';
+
+            return ActivityRow(
+              user: user,
+              action: "updated $project ($status)",
+              time: _timeAgo(data['updatedAt']),
+              color: _activityColor(status),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  // ⏱ Time formatter
+   String _timeAgo(Timestamp? ts) {
+    if (ts == null) return '';
+    final diff = DateTime.now().difference(ts.toDate());
+    if (diff.inMinutes < 60) return '${diff.inMinutes} mins ago';
+    if (diff.inHours < 24) return '${diff.inHours} hrs ago';
+    return '${diff.inDays} days ago';
+  }
+
+  // 🎨 Status-based color
+  static Color _activityColor(String status) {
+    switch (status) {
+      case "Completed":
+        return Colors.green;
+      case "Ongoing":
+        return Colors.orange;
+      default:
+        return Colors.blue;
+    }
+  }
+}
 
 
 class AdminDashboardPage extends StatelessWidget {
@@ -13,32 +96,7 @@ class AdminDashboardPage extends StatelessWidget {
 
   // --- DEFINED DATA LISTS ---
 
-  final List<Map<String, dynamic>> statsData = [
-    {
-      "icon": LucideIcons.calculator,
-      "label": "Total Estimates",
-      "value": "1,250",
-      "isSuccess": false,
-    },
-    {
-      "icon": LucideIcons.home,
-      "label": "Active Projects",
-      "value": "18",
-      "isSuccess": false,
-    },
-    {
-      "icon": LucideIcons.users,
-      "label": "Registred Users",
-      "value": "342",
-      "isSuccess": false,
-    },
-    {
-      "icon": LucideIcons.checkCircle,
-      "label": "Model Accuracy",
-      "value": "87.5 %",
-      "isSuccess": true,
-    },
-  ];
+
 
   final List<Map<String, dynamic>> performanceMetrics = [
     {"label": "MAE", "value": "₹ 22,508"},
@@ -46,26 +104,88 @@ class AdminDashboardPage extends StatelessWidget {
     {"label": "RMSE", "value": ".42"},
   ];
 
-  final List<Map<String, dynamic>> activities = [
-    {
-      "user": "Amit Sharma",
-      "action": "generated a new estimate",
-      "time": "10 mins ago",
-      "color": Colors.blue,
+  
+Widget buildStatsRow() {
+  return StreamBuilder<QuerySnapshot>(
+    stream: FirebaseFirestore.instance
+        .collectionGroup('projects')
+        .snapshots(),
+    builder: (context, projectSnap) {
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .snapshots(),
+        builder: (context, userSnap) {
+          if (!projectSnap.hasData || !userSnap.hasData) {
+            return const Row(
+              children: [
+                Expanded(child: StatCard(icon: Icons.hourglass_empty, label: "", value: "")),
+                SizedBox(width: 16),
+                Expanded(child: StatCard(icon: Icons.hourglass_empty, label: "", value: "")),
+                SizedBox(width: 16),
+                Expanded(child: StatCard(icon: Icons.hourglass_empty, label: "", value: "")),
+                SizedBox(width: 16),
+                Expanded(child: StatCard(icon: Icons.hourglass_empty, label: "", value: "")),
+              ],
+            );
+          }
+
+          final projects = projectSnap.data!.docs;
+          final users = userSnap.data!.docs;
+
+          final totalProjects = projects.length;
+
+          final activeProjects = projects.where((p) {
+            final status =
+                (p.data() as Map<String, dynamic>)['status'] ?? 'Pending';
+            return status != 'Completed';
+          }).length;
+
+          final totalUsers = users.length;
+
+          return Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  icon: LucideIcons.calculator,
+                  label: "Total Estimates",
+                  value: totalProjects.toString(),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: StatCard(
+                  icon: LucideIcons.home,
+                  label: "Active Projects",
+                  value: activeProjects.toString(),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: StatCard(
+                  icon: LucideIcons.users,
+                  label: "Registered Users",
+                  value: totalUsers.toString(),
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: StatCard(
+                  icon: LucideIcons.checkCircle,
+                  label: "Model Accuracy",
+                  value: "87.5 %",
+                  isSuccess: true,
+                ),
+              ),
+            ],
+          );
+        },
+      );
     },
-    {
-      "user": "Priya Mehta",
-      "action": "added a new project",
-      "time": "1 hour ago",
-      "color": Colors.redAccent,
-    },
-    {
-      "user": "Rahul Verma",
-      "action": "updated the model",
-      "time": "2 days ago",
-      "color": Colors.blue,
-    },
-  ];
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -76,23 +196,8 @@ class AdminDashboardPage extends StatelessWidget {
         child: Column(
           children: [
             // 1. Top Stats Row (Generated from List)
-            Row(
-              children: statsData.map((data) {
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      right: data == statsData.last ? 0 : 16,
-                    ),
-                    child: StatCard(
-                      icon: data['icon'],
-                      label: data['label'],
-                      value: data['value'],
-                      isSuccess: data['isSuccess'],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+          buildStatsRow(),
+
             const SizedBox(height: 24),
 
             // 2. Middle Row (Charts)
@@ -223,14 +328,8 @@ class AdminDashboardPage extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        ...activities.map(
-                          (act) => ActivityRow(
-                            user: act['user'],
-                            action: act['action'],
-                            time: act['time'],
-                            color: act['color'],
-                          ),
-                        ),
+                        const ActivityList(),
+
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
@@ -499,61 +598,89 @@ class MetricTiny extends StatelessWidget {
 
 
 class ProjectTable extends StatelessWidget {
-  ProjectTable({super.key});
-
-  // --- DEFINED DATA LIST ---
-  final List<Map<String, dynamic>> projects = [
-    {
-      "name": "Green Villa",
-      "location": "Mumbai",
-      "status": "Ongoing",
-      "color": const Color(0xFF4ADE80),
-      "hasDot": false,
-    },
-    {
-      "name": "Skyline Heights",
-      "location": "Delhi",
-      "status": "Completed",
-      "color": const Color(0xFF22C55E),
-      "hasDot": false,
-    },
-    {
-      "name": "Sunrise Plaza",
-      "location": "Bangalore",
-      "status": "Pending",
-      "color": Colors.orange,
-      "hasDot": true,
-    },
-  ];
+  const ProjectTable({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: DataTable(
-        headingTextStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-        horizontalMargin: 0,
-        columnSpacing: 20,
-        columns: const [
-          DataColumn(label: Expanded(child: Text("Project Name"))),
-          DataColumn(label: Expanded(child: Text("Location"))),
-          DataColumn(label: Expanded(child: Text("Status"))),
-        ],
-        // Dynamically generating rows from the list
-        rows: projects.map((project) {
-          return _projectRow(
-            project['name'],
-            project['location'],
-            project['status'],
-            project['color'],
-            hasDot: project['hasDot'],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collectionGroup('projects')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: Center(child: CircularProgressIndicator()),
           );
-        }).toList(),
-      ),
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: Text(
+              "No projects found",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+
+        // ✅ SAFE SORT (handles missing createdAt)
+        docs.sort((a, b) {
+          final ta =
+              (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+          final tb =
+              (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+
+          if (ta == null && tb == null) return 0;
+          if (ta == null) return 1;
+          if (tb == null) return -1;
+          return tb.compareTo(ta);
+        });
+
+        final projects = docs.take(5).toList();
+
+        return SizedBox(
+          width: double.infinity,
+          child: DataTable(
+            headingTextStyle:
+                const TextStyle(color: Colors.grey, fontSize: 12),
+            horizontalMargin: 0,
+            columnSpacing: 20,
+            columns: const [
+              DataColumn(label: Expanded(child: Text("Project Name"))),
+              DataColumn(label: Expanded(child: Text("Location"))),
+              DataColumn(label: Expanded(child: Text("Status"))),
+            ],
+            rows: projects.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+
+              final name = data['projectName'] ?? 'Project';
+              final location = data['location'] ?? '-';
+              final status = data['status'] ?? 'Pending';
+
+              final color = status == "Completed"
+                  ? const Color(0xFF22C55E)
+                  : status == "Ongoing"
+                      ? const Color(0xFF4ADE80)
+                      : Colors.orange;
+
+              return _projectRow(
+                name,
+                location,
+                status,
+                color,
+                hasDot: status == "Pending",
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 
-  // Your exact helper method logic preserved
+  // ⬇️ UNCHANGED UI
   DataRow _projectRow(
     String name,
     String loc,
@@ -604,6 +731,7 @@ class ProjectTable extends StatelessWidget {
     );
   }
 }
+
 
 
 

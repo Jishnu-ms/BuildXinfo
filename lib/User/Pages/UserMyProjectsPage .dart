@@ -83,13 +83,13 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
   Widget _buildProjectsTable() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
-          _buildTableHeader(),
-          const Divider(height: 1),
+          
+         
           Expanded(
             child: user == null
                 ? const Center(child: Text("Not logged in"))
@@ -173,71 +173,153 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
     );
   }
 
-  Widget _buildTableHeader() => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Row(
-          children: [
-            Expanded(flex: 3, child: Text('Project Name', style: _headerStyle)),
-            Expanded(flex: 2, child: Text('Location', style: _headerStyle)),
-            Expanded(flex: 1, child: Text('Floors', style: _headerStyle)),
-            Expanded(flex: 2, child: Text('Area', style: _headerStyle)),
-            Expanded(flex: 2, child: Text('Status', style: _headerStyle)),
-            Expanded(flex: 2, child: Text('Actions', style: _headerStyle)),
-          ],
-        ),
-      );
+
 
   // ================= ROW =================
 
-  Widget _buildProjectRow(
-    String projectId,
-    String name,
-    String loc,
-    String floors,
-    String area,
-    String status,
-    Color statusColor,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE))),
-      ),
-      child: Row(
-        children: [
-          Expanded(flex: 3, child: Text(name, style: _rowTextStyle)),
-          Expanded(flex: 2, child: Text(loc, style: _rowTextStyle)),
-          Expanded(flex: 1, child: Text(floors, style: _rowTextStyle)),
-          Expanded(flex: 2, child: Text(area, style: _rowTextStyle)),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _statusChip(status, statusColor),
+ Widget _buildProjectRow(
+  String projectId,
+  String name,
+  String loc,
+  String floors,
+  String area,
+  String status,
+  Color statusColor,
+) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.035),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        // 🔹 Accent strip (modern admin touch)
+        Container(
+          width: 4,
+          height: 100,
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.9),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
             ),
           ),
-          Expanded(
-            flex: 2,
+        ),
+
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
             child: Row(
               children: [
-                _buildActionIcon(
-                  Icons.edit,
-                  Colors.blue,
-                  onTap: () => _showEditProjectSheet(projectId, name, status),
+                // LEFT: Project info
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2B3674),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.place_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            loc,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text("•",
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(width: 10),
+                          const Icon(
+                            Icons.layers_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "$floors Floors",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text("•",
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(width: 10),
+                          Text(
+                            area,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                _buildActionIcon(
-                  Icons.delete,
-                  Colors.orange,
-                  onTap: () => _deleteProject(projectId, name),
+
+                // STATUS
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _statusChip(status, statusColor),
+                  ),
+                ),
+
+                // ACTIONS
+                Row(
+                  children: [
+                    _buildActionIcon(
+                      Icons.edit,
+                      Colors.blue,
+                      onTap: () =>
+                          _showEditProjectSheet(projectId, name, status),
+                    ),
+                    const SizedBox(width: 10),
+                    _buildActionIcon(
+                      Icons.delete,
+                      Colors.orange,
+                      onTap: () =>
+                          _deleteProject(projectId, name),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // ================= EDIT =================
 

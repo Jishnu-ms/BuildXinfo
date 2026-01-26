@@ -1,168 +1,312 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AdminProjectsPage extends StatelessWidget {
+class AdminProjectsPage extends StatefulWidget {
   const AdminProjectsPage({super.key});
+
+  @override
+  State<AdminProjectsPage> createState() => _AdminProjectsPageState();
+}
+
+class _AdminProjectsPageState extends State<AdminProjectsPage> {
+  String _searchQuery = "";
+  String _statusFilter = "All";
+  String _sortBy = "Latest";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collectionGroup('projects')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No projects found"));
-          }
-
-          final projects = snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-
-            final String status =
-                (data['status'] ?? "Pending").toString();
-
-            return {
-              "ref": doc.reference,
-              "name": data['projectName'] ?? "Unnamed",
-              "floors": data['floors'] ?? 0,
-              "area": "${data['areaSqft'] ?? 0} sqft",
-              "status": status,
-              "statusColor": _statusColor(status),
-              "totalCost": (data['totalCost'] ?? 0).toDouble(),
-            };
-          }).toList();
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Manage Projects",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2B3674),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _projectsTable(context, projects),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // ================= TABLE =================
-
-  static Widget _projectsTable(
-    BuildContext context,
-    List<Map<String, dynamic>> projects,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          _tableHeader(),
-          const Divider(height: 1),
-          ...projects.map((p) => _projectRow(context, p)),
-        ],
-      ),
-    );
-  }
-
-  static Widget _tableHeader() => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        child: Row(
+      body: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(flex: 3, child: Text("Project", style: _headerStyle)),
-            Expanded(flex: 2, child: Text("Floors / Area", style: _headerStyle)),
-            Expanded(flex: 2, child: Text("Cost", style: _headerStyle)),
-            Expanded(flex: 2, child: Text("Status", style: _headerStyle)),
-            Expanded(flex: 2, child: Text("Actions", style: _headerStyle)),
+            const Text(
+              "Manage Projects",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2B3674),
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildHeaderActions(),
+            const SizedBox(height: 24),
+            Expanded(child: _buildProjectsList()),
           ],
         ),
-      );
-
-  static Widget _projectRow(BuildContext context, Map<String, dynamic> p) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
-            child: Text(p['name'], style: _rowTextStyle),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text("${p['floors']} • ${p['area']}",
-                style: _rowTextStyle),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              "₹ ${p['totalCost'].toStringAsFixed(2)}",
-              style: _rowTextStyle,
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: _statusChip(p['status'], p['statusColor']),
-          ),
-          Expanded(
-            flex: 2,
-            child: Row(
-              children: [
-                _actionIcon(
-                  Icons.edit,
-                  Colors.blue,
-                  onTap: () => _showEditProjectSheet(context, p),
-                ),
-                const SizedBox(width: 10),
-                _actionIcon(
-                  Icons.delete,
-                  Colors.orange,
-                  onTap: () => _showDeleteProjectSheet(context, p),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  // ================= EDIT (BOTTOM SHEET) =================
+  // ================= HEADER (SAME STYLE AS USER PAGE) =================
 
-  static void _showEditProjectSheet(
+  Widget _buildHeaderActions() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: TextField(
+            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+            decoration: InputDecoration(
+              hintText: "Search projects...",
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        _dropdown(
+          value: _statusFilter,
+          items: const ["All", "Pending", "Ongoing", "Completed"],
+          onChanged: (v) => setState(() => _statusFilter = v),
+        ),
+        const SizedBox(width: 16),
+        _dropdown(
+          value: _sortBy,
+          items: const ["Latest", "Oldest", "Name"],
+          onChanged: (v) => setState(() => _sortBy = v),
+        ),
+      ],
+    );
+  }
+
+  // ================= LIST =================
+
+  Widget _buildProjectsList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collectionGroup('projects')
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // 🚨 EXACT SAME PATTERN AS USER PAGE
+        List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
+
+        // ================= SEARCH =================
+        docs = docs.where((d) {
+          final name = (d['projectName'] ?? '').toString().toLowerCase();
+          return name.contains(_searchQuery);
+        }).toList();
+
+        // ================= FILTER =================
+        if (_statusFilter != "All") {
+          docs = docs.where((d) {
+            final status = (d['status'] ?? 'Pending').toString();
+            return status == _statusFilter;
+          }).toList();
+        }
+
+        // ================= SORT =================
+        docs.sort((a, b) {
+          if (_sortBy == "Name") {
+            return (a['projectName'] ?? '').compareTo(b['projectName'] ?? '');
+          }
+
+          final ta =
+              (a['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+          final tb =
+              (b['createdAt'] as Timestamp?)?.millisecondsSinceEpoch ?? 0;
+
+          return _sortBy == "Oldest" ? ta - tb : tb - ta;
+        });
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text(
+              "No projects found",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
+            final data = doc.data() as Map<String, dynamic>;
+            final status = (data['status'] ?? 'Pending').toString();
+
+            return _projectCard(
+              context,
+              doc.reference,
+              data['projectName'] ?? 'Unnamed',
+              data['floors'] ?? 0,
+              "${data['areaSqft'] ?? 0} sqft",
+              (data['totalCost'] ?? 0).toDouble(),
+              status,
+              _statusColor(status),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ================= CARD =================
+
+Widget _projectCard(
+  BuildContext context,
+  DocumentReference ref,
+  String name,
+  int floors,
+  String area,
+  double cost,
+  String status,
+  Color statusColor,
+) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.035),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        // Subtle accent strip (modern touch)
+        Container(
+          width: 4,
+          height: 96,
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.9),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+            ),
+          ),
+        ),
+
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
+            child: Row(
+              children: [
+                // LEFT: Project info
+                Expanded(
+                  flex: 3,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2B3674),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.layers_outlined,
+                            size: 14,
+                            color: Colors.grey,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "$floors Floors",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text("•",
+                              style: TextStyle(color: Colors.grey)),
+                          const SizedBox(width: 10),
+                          Text(
+                            area,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // COST
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    "₹ ${cost.toStringAsFixed(2)}",
+                    textAlign: TextAlign.left,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2B3674),
+                    ),
+                  ),
+                ),
+
+                // STATUS
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _statusChip(status, statusColor),
+                  ),
+                ),
+
+                // ACTIONS
+                Row(
+                  children: [
+                    _actionIcon(
+                      Icons.edit,
+                      Colors.blue,
+                      onTap: () =>
+                          _showEditProjectSheet(context, ref, name, status),
+                    ),
+                    const SizedBox(width: 10),
+                    _actionIcon(
+                      Icons.delete,
+                      Colors.orange,
+                      onTap: () =>
+                          _showDeleteProjectSheet(context, ref, name),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+  // ================= EDIT (UNCHANGED LOGIC) =================
+
+  void _showEditProjectSheet(
     BuildContext context,
-    Map<String, dynamic> p,
+    DocumentReference ref,
+    String currentName,
+    String currentStatus,
   ) {
-    final nameController = TextEditingController(text: p['name']);
-    String selectedStatus = (p['status'] ?? "Pending").toString();
+    final nameController = TextEditingController(text: currentName);
+    String selectedStatus = currentStatus;
 
     showModalBottomSheet(
       context: context,
@@ -219,8 +363,7 @@ class AdminProjectsPage extends StatelessWidget {
                         selectedColor: color,
                         backgroundColor: color.withOpacity(0.15),
                         labelStyle: TextStyle(
-                          color:
-                              selectedStatus == s ? Colors.white : color,
+                          color: selectedStatus == s ? Colors.white : color,
                           fontWeight: FontWeight.bold,
                         ),
                         onSelected: (_) =>
@@ -235,7 +378,7 @@ class AdminProjectsPage extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
-                        await p['ref'].update({
+                        await ref.update({
                           "projectName": nameController.text.trim(),
                           "status": selectedStatus,
                           "updatedAt": FieldValue.serverTimestamp(),
@@ -263,11 +406,12 @@ class AdminProjectsPage extends StatelessWidget {
     );
   }
 
-  // ================= DELETE (BOTTOM SHEET) =================
+  // ================= DELETE (UNCHANGED LOGIC) =================
 
-  static void _showDeleteProjectSheet(
+  void _showDeleteProjectSheet(
     BuildContext context,
-    Map<String, dynamic> p,
+    DocumentReference projectRef,
+    String projectName,
   ) {
     showModalBottomSheet(
       context: context,
@@ -284,17 +428,35 @@ class AdminProjectsPage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dragHandle(),
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+
+              // Icon
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.red.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.delete_outline,
-                    color: Colors.redAccent, size: 28),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 28,
+                ),
               ),
+
               const SizedBox(height: 16),
+
               const Text(
                 "Delete Project?",
                 style: TextStyle(
@@ -303,12 +465,20 @@ class AdminProjectsPage extends StatelessWidget {
                   color: Color(0xFF2B3674),
                 ),
               ),
+
               const SizedBox(height: 8),
+
               Text(
-                "Are you sure you want to delete \"${p['name']}\"?\nThis action cannot be undone.",
-                style: const TextStyle(color: Colors.grey),
+                "Are you sure you want to delete \"$projectName\"?\nThis action cannot be undone.",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  height: 1.4,
+                ),
               ),
+
               const SizedBox(height: 28),
+
               Row(
                 children: [
                   Expanded(
@@ -316,19 +486,25 @@ class AdminProjectsPage extends StatelessWidget {
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey.shade300),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      child: const Text("Cancel",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          color: Color(0xFF2B3674),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        await p['ref'].delete();
+                        await projectRef.delete();
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
@@ -341,8 +517,9 @@ class AdminProjectsPage extends StatelessWidget {
                       child: const Text(
                         "Delete",
                         style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -355,60 +532,66 @@ class AdminProjectsPage extends StatelessWidget {
     );
   }
 
-  // ================= UI HELPERS =================
+  // ================= HELPERS =================
 
-  static Widget _dragHandle() => Center(
-        child: Container(
-          width: 40,
-          height: 4,
-          margin: const EdgeInsets.only(bottom: 20),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ),
-      );
+  Widget _dropdown({
+    required String value,
+    required List<String> items,
+    required Function(String) onChanged,
+  }) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: DropdownButton<String>(
+      value: value,
+      underline: const SizedBox(),
+      items: items
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
+      onChanged: (v) => onChanged(v!),
+    ),
+  );
+
+  static Widget _dragHandle() => Container(
+    width: 40,
+    height: 4,
+    margin: const EdgeInsets.only(bottom: 20),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade300,
+      borderRadius: BorderRadius.circular(4),
+    ),
+  );
 
   static Widget _statusChip(String text, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(radius: 4, backgroundColor: color),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+    ),
+  );
 
   static Widget _actionIcon(
     IconData icon,
     Color color, {
     VoidCallback? onTap,
-  }) =>
-      InkWell(
-        onTap: onTap,
+  }) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(8),
+    child: Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-      );
+      ),
+      child: Icon(icon, color: color, size: 18),
+    ),
+  );
 
   static Color _statusColor(String s) {
     switch (s) {
@@ -420,10 +603,4 @@ class AdminProjectsPage extends StatelessWidget {
         return const Color(0xFF05CD99);
     }
   }
-
-  static const _headerStyle =
-      TextStyle(color: Colors.grey, fontWeight: FontWeight.w600, fontSize: 14);
-
-  static const _rowTextStyle =
-      TextStyle(color: Color(0xFF2B3674), fontWeight: FontWeight.w500);
 }

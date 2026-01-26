@@ -1,183 +1,287 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AdminUsersPage extends StatelessWidget {
+class AdminUsersPage extends StatefulWidget {
   const AdminUsersPage({super.key});
+
+  @override
+  State<AdminUsersPage> createState() => _AdminUsersPageState();
+}
+
+class _AdminUsersPageState extends State<AdminUsersPage> {
+  String _searchQuery = "";
+  String _sortBy = "Name";
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('users').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                "Error: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
+      body: Padding(
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Manage Users",
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2B3674),
               ),
-            );
-          }
+            ),
+            const SizedBox(height: 24),
+            _buildHeaderActions(),
+            const SizedBox(height: 24),
+            Expanded(child: _buildUsersList()),
+          ],
+        ),
+      ),
+    );
+  }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No users found"));
-          }
+  // ================= HEADER =================
 
-          final users = snapshot.data!.docs.map((doc) {
+  Widget _buildHeaderActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            onChanged: (v) =>
+                setState(() => _searchQuery = v.toLowerCase()),
+            decoration: InputDecoration(
+              hintText: "Search users...",
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        _dropdown(
+          value: _sortBy,
+          items: const ["Name", "Role"],
+          onChanged: (v) => setState(() => _sortBy = v),
+        ),
+      ],
+    );
+  }
+
+  // ================= USERS LIST =================
+
+  Widget _buildUsersList() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
+
+        // SEARCH (same logic as user page)
+        docs = docs.where((d) {
+          final data = d.data() as Map<String, dynamic>;
+          final name = (data['name'] ?? '').toString().toLowerCase();
+          return name.contains(_searchQuery);
+        }).toList();
+
+        // SORT
+        docs.sort((a, b) {
+          final da = a.data() as Map<String, dynamic>;
+          final db = b.data() as Map<String, dynamic>;
+
+          if (_sortBy == "Role") {
+            return (da['role'] ?? '').compareTo(db['role'] ?? '');
+          }
+          return (da['name'] ?? '').compareTo(db['name'] ?? '');
+        });
+
+        if (docs.isEmpty) {
+          return const Center(
+            child: Text("No users found",
+                style: TextStyle(color: Colors.grey)),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
 
-            return {
-              "ref": doc.reference,
-              "name": data['name'] ?? 'Unnamed',
-              "email": data['email'] ?? '-',
-              "role": data['role'] ?? 'User',
-              "avatar": data['avatar'],
-              "projects": data['projectsCount'] ?? 0,
-            };
-          }).toList();
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(30),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Manage Users",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2B3674),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _usersTable(context, users),
-              ],
-            ),
-          );
-        },
-      ),
+            return _userCard(
+              context,
+              doc.reference,
+              data['name'] ?? 'Unnamed',
+              data['email'] ?? '-',
+              data['role'] ?? 'User',
+              data['avatar'],
+            );
+          },
+        );
+      },
     );
   }
 
-  // ================= TABLE =================
+  // ================= USER CARD =================
 
-  static Widget _usersTable(
-    BuildContext context,
-    List<Map<String, dynamic>> users,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          _tableHeader(),
-          const Divider(height: 1),
-          ...users.map((u) => _userRow(context, u)),
-        ],
-      ),
-    );
-  }
+  Widget _userCard(
+  BuildContext context,
+  DocumentReference ref,
+  String name,
+  String email,
+  String role,
+  String? avatar,
+) {
+  final roleColor = _roleColor(role);
 
-  static Widget _tableHeader() => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-    child: Row(
-      children: [
-        Expanded(flex: 3, child: Text("User", style: _headerStyle)),
-        Expanded(flex: 2, child: Text("Role", style: _headerStyle)),
-        Expanded(flex: 1, child: Text("Projects", style: _headerStyle)),
-        Expanded(flex: 2, child: Text("Actions", style: _headerStyle)),
+  return Container(
+    margin: const EdgeInsets.only(bottom: 18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.035),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
       ],
     ),
-  );
+    child: Row(
+      children: [
+        // Accent strip (same language as project card)
+        Container(
+          width: 4,
+          height: 92,
+          decoration: BoxDecoration(
+            color: roleColor.withOpacity(0.9),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+            ),
+          ),
+        ),
 
-  static Widget _userRow(BuildContext context, Map<String, dynamic> u) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE))),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 3,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
             child: Row(
               children: [
+                // Avatar
                 CircleAvatar(
-                  radius: 20,
+                  radius: 22,
                   backgroundColor: Colors.grey.shade200,
-                  backgroundImage: u['avatar'] != null
-                      ? NetworkImage(u['avatar'])
-                      : null,
-                  child: u['avatar'] == null
+                  backgroundImage:
+                      avatar != null ? NetworkImage(avatar) : null,
+                  child: avatar == null
                       ? const Icon(Icons.person, color: Colors.grey)
                       : null,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
+
+                // Name + email
                 Expanded(
+                  flex: 3,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(u['name'], style: _rowTextStyle),
                       Text(
-                        u['email'],
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2B3674),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: _roleBadge(u['role']),
-            ),
-          ),
 
-          Expanded(
-            flex: 1,
-            child: Text("${u['projects']}", style: _rowTextStyle),
-          ),
-          Expanded(
-            flex: 2,
-            child: Row(
-              children: [
-                _actionIcon(
-                  Icons.edit,
-                  Colors.blue,
-                  onTap: () => _showEditUserSheet(context, u),
+                // Role badge
+                Expanded(
+                  flex: 2,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _roleBadge(role),
+                  ),
                 ),
-                const SizedBox(width: 10),
-                _actionIcon(
-                  Icons.delete,
-                  Colors.orange,
-                  onTap: () => _showDeleteUserSheet(context, u),
+
+                // Project count
+                Expanded(
+                  flex: 2,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: ref.collection('projects').snapshots(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) {
+                        return const Text(
+                          "-",
+                          style: TextStyle(color: Colors.grey),
+                        );
+                      }
+                      return Text(
+                        "${snap.data!.docs.length} Projects",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF2B3674),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Actions
+                Row(
+                  children: [
+                    _actionIcon(
+                      Icons.edit,
+                      Colors.blue,
+                      onTap: () =>
+                          _showEditUserSheet(context, ref, role),
+                    ),
+                    const SizedBox(width: 10),
+                    _actionIcon(
+                      Icons.delete,
+                      Colors.orange,
+                      onTap: () =>
+                          _showDeleteUserSheet(context, ref, name),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // ================= EDIT USER =================
 
-  static void _showEditUserSheet(BuildContext context, Map<String, dynamic> u) {
-    String selectedRole = u['role'] ?? "User";
+  void _showEditUserSheet(
+    BuildContext context,
+    DocumentReference ref,
+    String currentRole,
+  ) {
+    String selectedRole = currentRole;
 
     showModalBottomSheet(
       context: context,
@@ -190,7 +294,8 @@ class AdminUsersPage extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius:
+                    BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -208,24 +313,25 @@ class AdminUsersPage extends StatelessWidget {
                   const SizedBox(height: 20),
                   Wrap(
                     spacing: 10,
-                    children: ["Admin", "Project Manager", "Engineer", "User"]
-                        .map((r) {
-                          final color = _roleColor(r);
-                          return ChoiceChip(
-                            label: Text(r),
-                            selected: selectedRole == r,
-                            selectedColor: color,
-                            backgroundColor: color.withOpacity(0.15),
-                            labelStyle: TextStyle(
-                              color: selectedRole == r ? Colors.white : color,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            onSelected: (_) =>
-                                setModalState(() => selectedRole = r),
-                            showCheckmark: false,
-                          );
-                        })
-                        .toList(),
+                    children:
+                        ["Admin", "Project Manager", "Engineer", "User"]
+                            .map((r) {
+                      final color = _roleColor(r);
+                      return ChoiceChip(
+                        label: Text(r),
+                        selected: selectedRole == r,
+                        selectedColor: color,
+                        backgroundColor: color.withOpacity(0.15),
+                        labelStyle: TextStyle(
+                          color:
+                              selectedRole == r ? Colors.white : color,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        onSelected: (_) =>
+                            setModalState(() => selectedRole = r),
+                        showCheckmark: false,
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
@@ -233,7 +339,7 @@ class AdminUsersPage extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton(
                       onPressed: () async {
-                        await u['ref'].update({
+                        await ref.update({
                           "role": selectedRole,
                           "updatedAt": FieldValue.serverTimestamp(),
                         });
@@ -260,11 +366,12 @@ class AdminUsersPage extends StatelessWidget {
     );
   }
 
-  // ================= DELETE USER =================
+  // ================= DELETE USER (UNCHANGED UI) =================
 
-  static void _showDeleteUserSheet(
+  void _showDeleteUserSheet(
     BuildContext context,
-    Map<String, dynamic> u,
+    DocumentReference ref,
+    String name,
   ) {
     showModalBottomSheet(
       context: context,
@@ -282,6 +389,19 @@ class AdminUsersPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _dragHandle(),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.redAccent,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
               const Text(
                 "Delete User?",
                 style: TextStyle(
@@ -292,8 +412,12 @@ class AdminUsersPage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                "Are you sure you want to delete ${u['name']}?\nThis cannot be undone.",
-                style: const TextStyle(color: Colors.grey),
+                "Are you sure you want to delete \"$name\"?\nThis action cannot be undone.",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 28),
               Row(
@@ -301,22 +425,42 @@ class AdminUsersPage extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text("Cancel"),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: Colors.grey.shade300),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(
+                          color: Color(0xFF2B3674),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        await u['ref'].delete();
+                        await ref.delete();
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                       child: const Text(
                         "Delete",
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -329,19 +473,41 @@ class AdminUsersPage extends StatelessWidget {
     );
   }
 
-  // ================= UI HELPERS =================
+  // ================= HELPERS =================
+
+  Widget _dropdown({
+    required String value,
+    required List<String> items,
+    required Function(String) onChanged,
+  }) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: DropdownButton<String>(
+          value: value,
+          underline: const SizedBox(),
+          items: items
+              .map((e) =>
+                  DropdownMenuItem(value: e, child: Text(e)))
+              .toList(),
+          onChanged: (v) => onChanged(v!),
+        ),
+      );
 
   static Widget _dragHandle() => Center(
-    child: Container(
-      width: 40,
-      height: 4,
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade300,
-        borderRadius: BorderRadius.circular(4),
-      ),
-    ),
-  );
+        child: Container(
+          width: 40,
+          height: 4,
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      );
 
   static Widget _roleBadge(String role) {
     final color = _roleColor(role);
@@ -379,26 +545,17 @@ class AdminUsersPage extends StatelessWidget {
     IconData icon,
     Color color, {
     VoidCallback? onTap,
-  }) => InkWell(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+  }) =>
+      InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(icon, color: color, size: 18),
-    ),
-  );
-
-  static const _headerStyle = TextStyle(
-    color: Colors.grey,
-    fontWeight: FontWeight.w600,
-    fontSize: 14,
-  );
-
-  static const _rowTextStyle = TextStyle(
-    color: Color(0xFF2B3674),
-    fontWeight: FontWeight.w500,
-  );
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+      );
 }
