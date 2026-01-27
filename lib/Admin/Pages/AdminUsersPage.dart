@@ -14,40 +14,48 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen width to adjust padding/font sizes globally if needed
+    double screenWidth = MediaQuery.of(context).size.width;
+    double horizontalPadding = screenWidth > 600 ? 30 : 16;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
-      body: Padding(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Manage Users",
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2B3674),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Manage Users",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2B3674),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            _buildHeaderActions(),
-            const SizedBox(height: 24),
-            Expanded(child: _buildUsersList()),
-          ],
+              const SizedBox(height: 24),
+              _buildHeaderActions(screenWidth),
+              const SizedBox(height: 24),
+              Expanded(child: _buildUsersList(screenWidth)),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // ================= HEADER =================
+  // ================= HEADER (Responsive Row/Column) =================
 
-  Widget _buildHeaderActions() {
-    return Row(
+  Widget _buildHeaderActions(double width) {
+    bool isMobile = width < 600;
+    return Flex(
+      direction: isMobile ? Axis.vertical : Axis.horizontal,
       children: [
         Expanded(
+          flex: isMobile ? 0 : 1,
           child: TextField(
-            onChanged: (v) =>
-                setState(() => _searchQuery = v.toLowerCase()),
+            onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
             decoration: InputDecoration(
               hintText: "Search users...",
               prefixIcon: const Icon(Icons.search),
@@ -60,11 +68,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             ),
           ),
         ),
-        const SizedBox(width: 16),
-        _dropdown(
-          value: _sortBy,
-          items: const ["Name", "Role"],
-          onChanged: (v) => setState(() => _sortBy = v),
+        SizedBox(width: isMobile ? 0 : 16, height: isMobile ? 12 : 0),
+        SizedBox(
+          width: isMobile ? double.infinity : 150,
+          child: _dropdown(
+            value: _sortBy,
+            items: const ["Name", "Role"],
+            onChanged: (v) => setState(() => _sortBy = v),
+          ),
         ),
       ],
     );
@@ -72,7 +83,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   // ================= USERS LIST =================
 
-  Widget _buildUsersList() {
+  Widget _buildUsersList(double screenWidth) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
@@ -82,18 +93,15 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
         List<QueryDocumentSnapshot> docs = snapshot.data!.docs;
 
-        // SEARCH (same logic as user page)
         docs = docs.where((d) {
           final data = d.data() as Map<String, dynamic>;
           final name = (data['name'] ?? '').toString().toLowerCase();
           return name.contains(_searchQuery);
         }).toList();
 
-        // SORT
         docs.sort((a, b) {
           final da = a.data() as Map<String, dynamic>;
           final db = b.data() as Map<String, dynamic>;
-
           if (_sortBy == "Role") {
             return (da['role'] ?? '').compareTo(db['role'] ?? '');
           }
@@ -102,8 +110,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
         if (docs.isEmpty) {
           return const Center(
-            child: Text("No users found",
-                style: TextStyle(color: Colors.grey)),
+            child: Text("No users found", style: TextStyle(color: Colors.grey)),
           );
         }
 
@@ -120,6 +127,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               data['email'] ?? '-',
               data['role'] ?? 'User',
               data['avatar'],
+              screenWidth,
             );
           },
         );
@@ -127,154 +135,180 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  // ================= USER CARD =================
+  // ================= RESPONSIVE USER CARD =================
 
   Widget _userCard(
-  BuildContext context,
-  DocumentReference ref,
-  String name,
-  String email,
-  String role,
-  String? avatar,
-) {
-  final roleColor = _roleColor(role);
+    BuildContext context,
+    DocumentReference ref,
+    String name,
+    String email,
+    String role,
+    String? avatar,
+    double screenWidth,
+  ) {
+    final roleColor = _roleColor(role);
+    bool isMobile = screenWidth < 750; // Threshold for stacking
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 18),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.035),
-          blurRadius: 24,
-          offset: const Offset(0, 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.035),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Accent strip
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                color: roleColor.withOpacity(0.9),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
+              ),
+            ),
+
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: isMobile 
+                  ? _buildMobileLayout(context, ref, name, email, role, avatar)
+                  : _buildDesktopLayout(context, ref, name, email, role, avatar),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-    child: Row(
+      ),
+    );
+  }
+
+  // Desktop View: Horizontal Row
+  Widget _buildDesktopLayout(context, ref, name, email, role, avatar) {
+    return Row(
       children: [
-        // Accent strip (same language as project card)
-        Container(
-          width: 4,
-          height: 92,
-          decoration: BoxDecoration(
-            color: roleColor.withOpacity(0.9),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              bottomLeft: Radius.circular(20),
-            ),
-          ),
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+          child: avatar == null ? const Icon(Icons.person, color: Colors.grey) : null,
         ),
-
+        const SizedBox(width: 14),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 16, 18),
-            child: Row(
-              children: [
-                // Avatar
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey.shade200,
-                  backgroundImage:
-                      avatar != null ? NetworkImage(avatar) : null,
-                  child: avatar == null
-                      ? const Icon(Icons.person, color: Colors.grey)
-                      : null,
-                ),
-                const SizedBox(width: 14),
+          flex: 3,
+          child: _nameEmailCol(name, email),
+        ),
+        Expanded(
+          flex: 2,
+          child: _roleBadge(role),
+        ),
+        Expanded(
+          flex: 2,
+          child: _projectCountStream(ref),
+        ),
+        _actionButtons(context, ref, name, role),
+      ],
+    );
+  }
 
-                // Name + email
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2B3674),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Role badge
-                Expanded(
-                  flex: 2,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: _roleBadge(role),
-                  ),
-                ),
-
-                // Project count
-                Expanded(
-                  flex: 2,
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: ref.collection('projects').snapshots(),
-                    builder: (context, snap) {
-                      if (!snap.hasData) {
-                        return const Text(
-                          "-",
-                          style: TextStyle(color: Colors.grey),
-                        );
-                      }
-                      return Text(
-                        "${snap.data!.docs.length} Projects",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2B3674),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Actions
-                Row(
-                  children: [
-                    _actionIcon(
-                      Icons.edit,
-                      Colors.blue,
-                      onTap: () =>
-                          _showEditUserSheet(context, ref, role),
-                    ),
-                    const SizedBox(width: 10),
-                    _actionIcon(
-                      Icons.delete,
-                      Colors.orange,
-                      onTap: () =>
-                          _showDeleteUserSheet(context, ref, name),
-                    ),
-                  ],
-                ),
-              ],
+  // Mobile View: Stacked Layout
+  Widget _buildMobileLayout(context, ref, name, email, role, avatar) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+              child: avatar == null ? const Icon(Icons.person, color: Colors.grey) : null,
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(child: _nameEmailCol(name, email)),
+            _actionButtons(context, ref, name, role),
+          ],
+        ),
+        const Divider(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _roleBadge(role),
+            _projectCountStream(ref),
+          ],
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 
-  // ================= EDIT USER =================
+  // ================= UI SUB-COMPONENTS =================
+
+  Widget _nameEmailCol(String name, String email) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2B3674),
+            ),
+          ),
+          Text(
+            email,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      );
+
+  Widget _projectCountStream(DocumentReference ref) => StreamBuilder<QuerySnapshot>(
+        stream: ref.collection('projects').snapshots(),
+        builder: (context, snap) {
+          String text = snap.hasData ? "${snap.data!.docs.length} Projects" : "...";
+          return Text(
+            text,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF2B3674),
+            ),
+          );
+        },
+      );
+
+  Widget _actionButtons(context, ref, name, role) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _actionIcon(
+            Icons.edit,
+            Colors.blue,
+            onTap: () => _showEditUserSheet(context, ref, role),
+          ),
+          const SizedBox(width: 8),
+          _actionIcon(
+            Icons.delete,
+            Colors.orange,
+            onTap: () => _showDeleteUserSheet(context, ref, name),
+          ),
+        ],
+      );
+
+  // ================= MODALS & HELPERS (Keep existing logic) =================
+
+  // ================= EDIT USER (Original UI + Responsive Wrap) =================
 
   void _showEditUserSheet(
     BuildContext context,
@@ -291,11 +325,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 32), // Adjusted for drag handle
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                    BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -311,8 +344,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  // Wrap ensures chips don't overflow on small screens
                   Wrap(
                     spacing: 10,
+                    runSpacing: 10,
                     children:
                         ["Admin", "Project Manager", "Engineer", "User"]
                             .map((r) {
@@ -323,8 +358,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         selectedColor: color,
                         backgroundColor: color.withOpacity(0.15),
                         labelStyle: TextStyle(
-                          color:
-                              selectedRole == r ? Colors.white : color,
+                          color: selectedRole == r ? Colors.white : color,
                           fontWeight: FontWeight.bold,
                         ),
                         onSelected: (_) =>
@@ -353,7 +387,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ),
                       child: const Text(
                         "Save Changes",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -366,7 +403,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  // ================= DELETE USER (UNCHANGED UI) =================
+  // ================= DELETE USER (Original UI Restored) =================
 
   void _showDeleteUserSheet(
     BuildContext context,
@@ -379,7 +416,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       isScrollControlled: true,
       builder: (_) {
         return Container(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -472,28 +509,16 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       },
     );
   }
-
-  // ================= HELPERS =================
-
-  Widget _dropdown({
-    required String value,
-    required List<String> items,
-    required Function(String) onChanged,
-  }) =>
-      Container(
+  Widget _dropdown({required String value, required List<String> items, required Function(String) onChanged}) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: DropdownButton<String>(
-          value: value,
-          underline: const SizedBox(),
-          items: items
-              .map((e) =>
-                  DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (v) => onChanged(v!),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            isExpanded: true,
+            value: value,
+            items: items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) => onChanged(v!),
+          ),
         ),
       );
 
@@ -502,59 +527,37 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           width: 40,
           height: 4,
           margin: const EdgeInsets.only(bottom: 20),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(4),
-          ),
+          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)),
         ),
       );
 
   static Widget _roleBadge(String role) {
     final color = _roleColor(role);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        role,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
+    return UnconstrainedBox(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+        child: Text(role, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
       ),
     );
   }
 
   static Color _roleColor(String role) {
     switch (role) {
-      case "Admin":
-        return const Color(0xFF2563EB);
-      case "Project Manager":
-        return const Color(0xFFD97706);
-      case "Engineer":
-        return const Color(0xFF059669);
-      default:
-        return const Color(0xFF94A3B8);
+      case "Admin": return const Color(0xFF2563EB);
+      case "Project Manager": return const Color(0xFFD97706);
+      case "Engineer": return const Color(0xFF059669);
+      default: return const Color(0xFF94A3B8);
     }
   }
 
-  static Widget _actionIcon(
-    IconData icon,
-    Color color, {
-    VoidCallback? onTap,
-  }) =>
-      InkWell(
+  static Widget _actionIcon(IconData icon, Color color, {VoidCallback? onTap}) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 18),
         ),
       );

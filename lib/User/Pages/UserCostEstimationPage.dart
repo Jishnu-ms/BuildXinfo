@@ -6,27 +6,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 const String apiBaseUrl = "https://bulildxinfo-dnn.onrender.com";
 
-void main() {
-  runApp(MaterialApp(
-    theme: ThemeData(
-      primarySwatch: Colors.blue,
-      useMaterial3: true,
-      fontFamily: 'Roboto',
-    ),
-    home: const UserCostEstimationPage(),
-    debugShowCheckedModeBanner: false,
-  ));
-}
-
 class UserCostEstimationPage extends StatefulWidget {
   const UserCostEstimationPage({super.key});
 
   @override
-  State<UserCostEstimationPage> createState() => _UserCostEstimationPageState();
+  State<UserCostEstimationPage> createState() =>
+      _UserCostEstimationPageState();
 }
 
 class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
-  final TextEditingController _projectNameController = TextEditingController();
+  final TextEditingController _projectNameController =
+      TextEditingController();
   final TextEditingController _areaController = TextEditingController();
   final TextEditingController _workerCostController =
       TextEditingController(text: "500");
@@ -66,7 +56,8 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
 
   Future<void> _calculateEstimation() async {
     final area = double.tryParse(_areaController.text.trim());
-    final workerCost = double.tryParse(_workerCostController.text.trim());
+    final workerCost =
+        double.tryParse(_workerCostController.text.trim());
     final projectName = _projectNameController.text.trim();
 
     if (projectName.isEmpty) {
@@ -111,11 +102,15 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
 
         setState(() {
           baseMlCost = (data["base_ml_cost"] ?? 0).toDouble();
-          adjustedBase = (data["adjusted_base_cost"] ?? 0).toDouble();
-          materialCost = (data["material_cost"] ?? 0).toDouble();
+          adjustedBase =
+              (data["adjusted_base_cost"] ?? 0).toDouble();
+          materialCost =
+              (data["material_cost"] ?? 0).toDouble();
           labourCost = (data["labour_cost"] ?? 0).toDouble();
-          totalCost = (data["final_estimated_cost"] ?? 0).toDouble();
-          timeMonths = (data["estimated_time_months"] ?? 0).toDouble();
+          totalCost =
+              (data["final_estimated_cost"] ?? 0).toDouble();
+          timeMonths =
+              (data["estimated_time_months"] ?? 0).toDouble();
         });
 
         final user = FirebaseAuth.instance.currentUser;
@@ -156,48 +151,70 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFC),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 1100),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    children: [
-                      _buildMainSpecsCard(),
-                      const SizedBox(height: 20),
-                      _buildCollapsibleSection("Material Qualities", [
-                        _selectionRow("Cement", _cement, (v) => setState(() => _cement = v)),
-                        _selectionRow("Steel", _steel, (v) => setState(() => _steel = v)),
-                        _selectionRow("Bricks", _bricks, (v) => setState(() => _bricks = v)),
-                        _selectionRow("Sand", _sand, (v) => setState(() => _sand = v)),
-                        _selectionRow("Aggregate", _aggregate, (v) => setState(() => _aggregate = v)),
-                      ]),
-                      const SizedBox(height: 20),
-                      _buildCollapsibleSection("Work & Finishing", [
-                        _selectionRow("Flooring", _flooring, (v) => setState(() => _flooring = v)),
-                        _selectionRow("Painting", _painting, (v) => setState(() => _painting = v)),
-                        _selectionRow("Sanitary", _sanitary, (v) => setState(() => _sanitary = v)),
-                        _selectionRow("Electrical", _electrical, (v) => setState(() => _electrical = v)),
-                        _selectionRow("Kitchen", _kitchen, (v) => setState(() => _kitchen = v)),
-                        _selectionRow("Contractor", _contractor, (v) => setState(() => _contractor = v)),
-                      ]),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(flex: 2, child: _buildResultCard()),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 900;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF7FAFC),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? 16 : 24),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: isMobile
+                    ? Column(
+                        children: [
+                          _leftColumn(),
+                          const SizedBox(height: 24),
+                          _buildResultCard(),
+                        ],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: _leftColumn()),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 2, child: _buildResultCard()),
+                        ],
+                      ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _leftColumn() {
+    return Column(
+      children: [
+        _buildMainSpecsCard(),
+        const SizedBox(height: 20),
+        _buildCollapsibleSection("Material Qualities", [
+          _selectionRow("Cement", _cement, (v) => setState(() => _cement = v)),
+          _selectionRow("Steel", _steel, (v) => setState(() => _steel = v)),
+          _selectionRow("Bricks", _bricks, (v) => setState(() => _bricks = v)),
+          _selectionRow("Sand", _sand, (v) => setState(() => _sand = v)),
+          _selectionRow("Aggregate", _aggregate,
+              (v) => setState(() => _aggregate = v)),
+        ]),
+        const SizedBox(height: 20),
+        _buildCollapsibleSection("Work & Finishing", [
+          _selectionRow(
+              "Flooring", _flooring, (v) => setState(() => _flooring = v)),
+          _selectionRow(
+              "Painting", _painting, (v) => setState(() => _painting = v)),
+          _selectionRow(
+              "Sanitary", _sanitary, (v) => setState(() => _sanitary = v)),
+          _selectionRow(
+              "Electrical", _electrical, (v) => setState(() => _electrical = v)),
+          _selectionRow(
+              "Kitchen", _kitchen, (v) => setState(() => _kitchen = v)),
+          _selectionRow("Contractor", _contractor,
+              (v) => setState(() => _contractor = v)),
+        ]),
+      ],
     );
   }
 
@@ -211,15 +228,28 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
             decoration: InputDecoration(
               labelText: "Project Name",
               prefixIcon: const Icon(Icons.apartment),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildDropdown("Building Type", _buildingType, _buildingTypes, (v) => setState(() => _buildingType = v!))),
+              Expanded(
+                child: _buildDropdown(
+                    "Building Type",
+                    _buildingType,
+                    _buildingTypes,
+                    (v) => setState(() => _buildingType = v!)),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildDropdown("Special Facilities", _facilities, _facilitiesList, (v) => setState(() => _facilities = v!))),
+              Expanded(
+                child: _buildDropdown(
+                    "Special Facilities",
+                    _facilities,
+                    _facilitiesList,
+                    (v) => setState(() => _facilities = v!)),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -229,7 +259,8 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
             decoration: InputDecoration(
               labelText: "Total Built-up Area (sqft)",
               prefixIcon: const Icon(Icons.square_foot),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 20),
@@ -242,20 +273,36 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
                   decoration: InputDecoration(
                     labelText: "Avg Worker Cost/Day",
                     prefixIcon: const Icon(Icons.payments),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(child: _buildDropdown("Location", _location, _locations, (v) => setState(() => _location = v!))),
+              Expanded(
+                child: _buildDropdown("Location", _location, _locations,
+                    (v) => setState(() => _location = v!)),
+              ),
             ],
           ),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildDropdown("No. of Floors", _floors, [1,2,3,4,5,10], (v) => setState(() => _floors = v!))),
+              Expanded(
+                child: _buildDropdown(
+                    "No. of Floors",
+                    _floors,
+                    [1, 2, 3, 4, 5, 10],
+                    (v) => setState(() => _floors = v!)),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildDropdown("Rooms Per Floor", _roomsPerFloor, [1,2,3,4,5,6,8], (v) => setState(() => _roomsPerFloor = v!))),
+              Expanded(
+                child: _buildDropdown(
+                    "Rooms Per Floor",
+                    _roomsPerFloor,
+                    [1, 2, 3, 4, 5, 6, 8],
+                    (v) => setState(() => _roomsPerFloor = v!)),
+              ),
             ],
           ),
         ],
@@ -269,15 +316,21 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
       decoration: BoxDecoration(
         color: const Color(0xFF1A202C),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 15)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("FINAL ESTIMATED COST", style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const Text("FINAL ESTIMATED COST",
+              style: TextStyle(color: Colors.white70, fontSize: 12)),
           const SizedBox(height: 8),
           Text("₹ ${totalCost.toStringAsFixed(0)}",
-              style: const TextStyle(color: Colors.greenAccent, fontSize: 32, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  color: Colors.greenAccent,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold)),
           const Divider(color: Colors.white24, height: 32),
           _resultRow("ML Base Prediction", baseMlCost),
           _resultRow("Adjusted Base", adjustedBase),
@@ -293,7 +346,8 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
               onPressed: _isLoading ? null : _calculateEstimation,
               child: _isLoading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("CALCULATE NOW", style: TextStyle(fontWeight: FontWeight.bold)),
+                  : const Text("CALCULATE NOW",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -304,7 +358,8 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
   Widget _buildCollapsibleSection(String title, List<Widget> children) =>
       _CardWrapper(title: title, child: Column(children: children));
 
-  Widget _selectionRow(String label, String currentVal, Function(String) onSelect) {
+  Widget _selectionRow(
+      String label, String currentVal, Function(String) onSelect) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -314,9 +369,12 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
           Wrap(
             spacing: 4,
             children: _qualities.map((q) {
-              bool selected = q == currentVal;
+              final selected = q == currentVal;
               return ChoiceChip(
-                label: Text(q, style: TextStyle(fontSize: 11, color: selected ? Colors.white : Colors.black)),
+                label: Text(q,
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: selected ? Colors.white : Colors.black)),
                 selected: selected,
                 selectedColor: Colors.blue,
                 onSelected: (_) => onSelect(q),
@@ -336,23 +394,33 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.white70)),
-          Text(isTime ? "${value.toStringAsFixed(1)} Mo" : "₹ ${value.toStringAsFixed(0)}",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            isTime
+                ? "${value.toStringAsFixed(1)} Mo"
+                : "₹ ${value.toStringAsFixed(0)}",
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdown<T>(String label, T value, List<T> items, Function(T?) onChanged) {
+  Widget _buildDropdown<T>(
+      String label, T value, List<T> items, Function(T?) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
+        Text(label,
+            style: const TextStyle(fontSize: 11, color: Colors.blueGrey)),
         DropdownButton<T>(
           value: value,
           isExpanded: true,
           onChanged: onChanged,
-          items: items.map((e) => DropdownMenuItem(value: e, child: Text(e.toString()))).toList(),
+          items: items
+              .map((e) =>
+                  DropdownMenuItem(value: e, child: Text(e.toString())))
+              .toList(),
         ),
       ],
     );
@@ -362,6 +430,7 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
 class _CardWrapper extends StatelessWidget {
   final String title;
   final Widget child;
+
   const _CardWrapper({required this.title, required this.child});
 
   @override
@@ -371,13 +440,19 @@ class _CardWrapper extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+        ],
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueAccent)),
           const Divider(height: 25),
           child,
         ],
