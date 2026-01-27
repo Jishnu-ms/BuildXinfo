@@ -20,51 +20,45 @@ class _SignUpPageState extends State<SignUpPage> {
   String _selectedRole = "user";
   bool _loading = false;
   bool _obscure = true;
-
-  Future<void> _signup() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Passwords do not match"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(cred.user!.uid)
-          .set({
-        "name": _nameController.text.trim(),
-        "email": _emailController.text.trim(),
-        "role": _selectedRole,
-        "createdAt": FieldValue.serverTimestamp(),
-      });
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const UserNavbar()),
-      );
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message ?? "Signup failed"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
+Future<void> _signup() async {
+  if (_passwordController.text != _confirmPasswordController.text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Passwords do not match"),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
   }
+
+  setState(() => _loading = true);
+
+ try {
+  final cred = await FirebaseAuth.instance
+      .createUserWithEmailAndPassword(
+    email: _emailController.text.trim(),
+    password: _passwordController.text.trim(),
+  );
+
+  await FirebaseFirestore.instance
+      .collection('users')
+      .doc(cred.user!.uid)
+      .set({
+    "name": _nameController.text.trim(),
+    "email": _emailController.text.trim(),
+    "role": _selectedRole,
+    "createdAt": FieldValue.serverTimestamp(),
+  });
+
+  // 🔥 THIS IS THE FIX
+  Navigator.of(context).popUntil((route) => route.isFirst);
+
+} catch (e) {
+  
+}
+
+}
+
 
   @override
   Widget build(BuildContext context) {

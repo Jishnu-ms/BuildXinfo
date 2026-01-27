@@ -119,14 +119,10 @@ class _MainScreenState extends State<MainScreen> {
       },
     );
 
-    if (shouldLogout == true) {
-      await FirebaseAuth.instance.signOut();
-      Navigator.of(context, rootNavigator: true)
-          .pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-        (route) => false,
-      );
-    }
+   if (shouldLogout == true) {
+  await FirebaseAuth.instance.signOut();
+  // ✅ NOTHING ELSE
+}
   }
 
   /* ===================== SIDEBAR (DESKTOP) ===================== */

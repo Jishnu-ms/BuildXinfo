@@ -20,29 +20,26 @@ class _LoginPageState extends State<LoginPage> {
 
   static const adminUid = "V9Ki8n9EvPeKQ5LKgSrhp7ENGoo2";
 
-  Future<void> _login() async {
-    setState(() => _loading = true);
-    try {
-      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      final uid = cred.user!.uid;
-
-      if (uid == adminUid) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AdminNavbar()));
-      } else {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserNavbar()));
-      }
-    } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? "Login failed"), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
+Future<void> _login() async {
+  setState(() => _loading = true);
+  try {
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+    // ✅ DO NOTHING ELSE
+    // main.dart will handle routing
+  } on FirebaseAuthException catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.message ?? "Login failed"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _loading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
