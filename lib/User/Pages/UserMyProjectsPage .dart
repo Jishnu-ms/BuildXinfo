@@ -26,7 +26,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
 
         return Container(
           padding: EdgeInsets.all(isMobile ? 16 : 32),
-          color: const Color(0xFFF4F7FE),
+         
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -117,7 +117,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
 
   /* ================= TABLE ================= */
 
-  Widget _buildProjectsTable(bool isMobile) {
+ Widget _buildProjectsTable(bool isMobile) {
     return user == null
         ? const Center(child: Text("Not logged in"))
         : StreamBuilder<QuerySnapshot>(
@@ -135,7 +135,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
 
               docs = docs.where((d) {
                 final name = (d['projectName'] ?? '').toString().toLowerCase();
-                return name.contains(_searchQuery);
+                return name.contains(_searchQuery.toLowerCase());
               }).toList();
 
               if (_statusFilter != "All") {
@@ -164,12 +164,13 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
                 return const Center(
                   child: Text(
                     "No projects found",
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
                   ),
                 );
               }
 
               return ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                 itemCount: docs.length,
                 itemBuilder: (context, index) {
                   final data = docs[index].data() as Map<String, dynamic>;
@@ -178,10 +179,10 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
                   return _buildProjectRow(
                     isMobile,
                     docs[index].id,
-                    data['projectName'] ?? 'Unnamed',
-                    data['location'] ?? '-',
-                    data['floors']?.toString() ?? '-',
-                    "${data['areaSqft'] ?? '-'} sqft",
+                    data['projectName'] ?? 'Unnamed Project',
+                    data['location'] ?? 'Not specified',
+                    data['floors']?.toString() ?? '0',
+                    "${data['areaSqft'] ?? '0'} sqft",
                     status.text,
                     status.color,
                   );
@@ -191,7 +192,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
           );
   }
 
-  /* ================= ROW ================= */
+  /* ================= MODERNIZED ROW ================= */
 
   Widget _buildProjectRow(
     bool isMobile,
@@ -204,86 +205,140 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
     Color statusColor,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 24,
+            color: const Color(0xFFE0E5F2).withOpacity(0.4),
+            blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: isMobile ? null : 100,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.9),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Status Indicator Bar
+              Container(
+                width: 6,
+                color: statusColor.withOpacity(0.8),
               ),
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: isMobile
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _projectInfo(name, loc, floors, area),
-                        const SizedBox(height: 10),
-                        _statusChip(status, statusColor),
-                        const SizedBox(height: 10),
-                        _actions(projectId, name, status),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: _projectInfo(name, loc, floors, area),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
+                  child: isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(child: _projectNameText(name)),
+                                _statusChip(status, statusColor),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _projectMetaGrid(loc, floors, area),
+                            const Divider(height: 32, thickness: 0.8, color: Color(0xFFF4F7FE)),
+                            _actions(projectId, name, status),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _projectNameText(name),
+                                  const SizedBox(height: 8),
+                                  _projectMetaGrid(loc, floors, area),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            _statusChip(status, statusColor),
+                            const SizedBox(width: 32),
+                            _actions(projectId, name, status),
+                          ],
                         ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 24),
-                          child: _statusChip(status, statusColor),
-                        ),
-
-                        _actions(projectId, name, status),
-                      ],
-                    ),
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _projectInfo(String name, String loc, String floors, String area) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  /* ================= SUB-COMPONENTS ================= */
+
+  Widget _projectNameText(String name) {
+    return Text(
+      name,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF1B2559),
+        letterSpacing: -0.5,
+      ),
+    );
+  }
+
+  Widget _projectMetaGrid(String loc, String floors, String area) {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
       children: [
+        _metaItem(Icons.location_on_outlined, loc),
+        _metaItem(Icons.layers_outlined, "$floors Floors"),
+        _metaItem(Icons.square_foot_rounded, area),
+      ],
+    );
+  }
+
+  Widget _metaItem(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 15, color: const Color(0xFFA3AED0)),
+        const SizedBox(width: 6),
         Text(
-          name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          label,
           style: const TextStyle(
-            fontSize: 16.5,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF2B3674),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF707EAE),
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          "$loc • $floors Floors • $area",
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
       ],
+    );
+  }
+
+  Widget _statusChip(String status, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withOpacity(0.2), width: 1),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 0.5,
+        ),
+      ),
     );
   }
 
@@ -571,7 +626,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
   _StatusInfo _statusFromText(String s) {
     switch (s) {
       case "Pending":
-        return _StatusInfo("Pending", const Color(0xFFFFBC11));
+        return _StatusInfo("Pending", const Color.fromARGB(255, 255, 88, 17));
       case "Ongoing":
         return _StatusInfo("Ongoing", const Color(0xFFFFA500));
       default:
@@ -581,28 +636,7 @@ class _UsermyprojectspageState extends State<Usermyprojectspage> {
 
   /* ================= UI HELPERS ================= */
 
-  Widget _statusChip(String text, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.12),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleAvatar(radius: 4, backgroundColor: color),
-        const SizedBox(width: 8),
-        Text(
-          text,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    ),
-  );
+
 
   Widget _buildActionIcon(IconData icon, Color color, {VoidCallback? onTap}) =>
       InkWell(

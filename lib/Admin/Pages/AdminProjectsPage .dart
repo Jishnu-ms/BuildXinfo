@@ -18,7 +18,7 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
     bool isMobile = MediaQuery.of(context).size.width < 700;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(isMobile ? 16 : 30),
@@ -160,7 +160,7 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
 
   // ================= CARD (RESPONSIVE) =================
 
-  Widget _projectCard(
+ Widget _projectCard(
     BuildContext context,
     bool isMobile,
     DocumentReference ref,
@@ -172,41 +172,38 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
     Color statusColor,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 24,
+            color: const Color(0xFFE0E5F2).withOpacity(0.4),
+            blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: statusColor.withOpacity(0.9),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Modern Status Accent
+              Container(
+                width: 6,
+                color: statusColor.withOpacity(0.8),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
+                  child: isMobile
+                      ? _buildMobileCardContent(context, ref, name, floors, area, cost, status, statusColor)
+                      : _buildDesktopCardContent(context, ref, name, floors, area, cost, status, statusColor),
                 ),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: isMobile
-                    ? _buildMobileCardContent(context, ref, name, floors, area, cost, status, statusColor)
-                    : _buildDesktopCardContent(context, ref, name, floors, area, cost, status, statusColor),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -215,13 +212,10 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
   Widget _buildDesktopCardContent(BuildContext context, DocumentReference ref, String name, int floors, String area, double cost, String status, Color statusColor) {
     return Row(
       children: [
-        Expanded(flex: 3, child: _projectTitleInfo(name, floors, area)),
+        Expanded(flex: 4, child: _projectTitleInfo(name, floors, area)),
         Expanded(
           flex: 2,
-          child: Text(
-            "₹ ${cost.toStringAsFixed(2)}",
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2B3674)),
-          ),
+          child: _costText(cost),
         ),
         Expanded(
           flex: 2,
@@ -238,25 +232,28 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _projectTitleInfo(name, floors, area)),
             _actionButtons(context, ref, name, status),
           ],
         ),
-        const Divider(height: 24),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Divider(height: 1, thickness: 0.8, color: Color(0xFFF4F7FE)),
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _statusChip(status, statusColor),
-            Text(
-              "₹ ${cost.toStringAsFixed(2)}",
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2B3674)),
-            ),
+            _costText(cost),
           ],
         ),
       ],
     );
   }
+
+  /* ================= MODERN SUB-COMPONENTS ================= */
 
   Widget _projectTitleInfo(String name, int floors, String area) {
     return Column(
@@ -266,23 +263,75 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
           name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Color(0xFF2B3674)),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF1B2559),
+            letterSpacing: -0.5,
+          ),
         ),
-        const SizedBox(height: 6),
-        Row(
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 12,
           children: [
-            const Icon(Icons.layers_outlined, size: 14, color: Colors.grey),
-            const SizedBox(width: 4),
-            Text("$floors Floors", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(width: 8),
-            const Text("•", style: TextStyle(color: Colors.grey)),
-            const SizedBox(width: 8),
-            Text(area, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            _iconMeta(Icons.layers_outlined, "$floors Floors"),
+            _iconMeta(Icons.square_foot_rounded, area),
           ],
         ),
       ],
     );
   }
+
+  Widget _iconMeta(IconData icon, String text) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFFA3AED0)),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF707EAE),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _costText(double cost) {
+    return Text(
+      "₹${cost.toStringAsFixed(2)}",
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF1B2559),
+        letterSpacing: -0.5,
+      ),
+    );
+  }
+
+  Widget _statusChip(String status, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withOpacity(0.1), width: 1),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: color,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+  
 
   Widget _actionButtons(BuildContext context, DocumentReference ref, String name, String status) {
     return Row(
@@ -448,11 +497,7 @@ class _AdminProjectsPageState extends State<AdminProjectsPage> {
         ),
       );
 
-  static Widget _statusChip(String text, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-    decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-    child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
-  );
+
 
   static Widget _actionIcon(IconData icon, Color color, {VoidCallback? onTap}) => InkWell(
     onTap: onTap,

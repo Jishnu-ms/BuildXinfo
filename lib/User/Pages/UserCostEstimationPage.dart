@@ -156,7 +156,7 @@ class _UserCostEstimationPageState extends State<UserCostEstimationPage> {
         final isMobile = constraints.maxWidth < 900;
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF7FAFC),
+          
           body: SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? 16 : 24),
             child: Center(

@@ -192,42 +192,113 @@ class ProfileHeader extends StatelessWidget {
         if (!snapshot.hasData) return const SizedBox();
 
         final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final String name = data['name'] ?? 'No Name';
+        final String role = data['role'] ?? 'User';
+        final String email = data['email'] ?? '';
 
         return Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE0E5F2).withOpacity(0.5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundImage: NetworkImage(
-                  data['imageUrl'] ??
-                      "https://i.pravatar.cc/150?u=$userId",
+              // Avatar with Modern Border/Ring
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF422AFB).withOpacity(0.1),
+                    width: 2,
+                  ),
+                ),
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: const Color(0xFFF4F7FE),
+                  backgroundImage: NetworkImage(
+                    data['imageUrl'] ?? "https://i.pravatar.cc/150?u=$userId",
+                  ),
                 ),
               ),
               const SizedBox(width: 20),
+              
+              // User Details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data['name'] ?? 'No Name',
+                      name,
                       style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1B2559),
+                        letterSpacing: -0.5,
                       ),
                     ),
-                    Text(data['role'] ?? 'User'),
-                    Text(
-                      data['email'] ?? '',
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 4),
+                    
+                    // Role Tag
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF422AFB).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        role,
+                        style: const TextStyle(
+                          color: Color(0xFF422AFB),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    // Email with Icon
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.mail_outline_rounded,
+                          size: 16,
+                          color: Color(0xFFA3AED0),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            email,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF707EAE),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
+              
+              // Optional: Edit Profile or Settings Action
+              if (MediaQuery.of(context).size.width > 600)
+                IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.settings_outlined),
+                  color: const Color(0xFFA3AED0),
+                ),
             ],
           ),
         );
@@ -336,7 +407,7 @@ class ProjectsTableWidget extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status) {
       case "Pending":
-        return const Color(0xFFFFBC11);
+        return const Color(0xFFFF4911);
       case "Ongoing":
         return const Color(0xFFFFA500);
       default:
@@ -347,72 +418,155 @@ class ProjectsTableWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Table(
-          columnWidths: const {
-            0: FixedColumnWidth(200),
-            1: FixedColumnWidth(160),
-            2: FixedColumnWidth(140),
-          },
-          children: [
-            _headerRow(),
-            ...projects.map(_dataRow),
-          ],
-        ),
-      ),
-    );
-  }
-
-  TableRow _headerRow() {
-    return const TableRow(
-      children: [
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 14),
-          child: Text("Project Name", style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 14),
-          child: Text("Location", style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        Padding(
-          padding: EdgeInsets.symmetric(vertical: 14),
-          child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-      ],
-    );
-  }
-
-  TableRow _dataRow(ProjectData p) {
-    final color = _statusColor(p.status);
-    return TableRow(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Text(p.name),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Text(p.location),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Row(
-            children: [
-              CircleAvatar(radius: 4, backgroundColor: color),
-              const SizedBox(width: 8),
-              Text(p.status, style: TextStyle(color: color)),
-            ],
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE0E5F2).withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-        ),
-      ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Elegant Header Section
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Recent Projects",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1B2559),
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: const Text("See all", style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+
+          // Scrollable Table Content
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _headerRow(),
+                  const SizedBox(height: 8),
+                  ...projects.map((p) => _dataRow(p)),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _headerRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE), width: 2)),
+      ),
+      child: Row(
+        children: const [
+          SizedBox(width: 220, child: Text("PROJECT NAME", style: _headerStyle)),
+          SizedBox(width: 180, child: Text("LOCATION", style: _headerStyle)),
+          SizedBox(width: 140, child: Text("STATUS", style: _headerStyle)),
+        ],
+      ),
+    );
+  }
+
+  Widget _dataRow(ProjectData p) {
+    final color = _statusColor(p.status);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF4F7FE), width: 1)),
+      ),
+      child: Row(
+        children: [
+          // Project Name with modern weight
+          SizedBox(
+            width: 220,
+            child: Text(
+              p.name,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1B2559),
+                fontSize: 15,
+              ),
+            ),
+          ),
+          // Location with muted color
+          SizedBox(
+            width: 180,
+            child: Text(
+              p.location,
+              style: const TextStyle(
+                color: Color(0xFF707EAE),
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          // Status with Soft Background Chip
+          SizedBox(
+            width: 140,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircleAvatar(radius: 3, backgroundColor: color),
+                      const SizedBox(width: 6),
+                      Text(
+                        p.status,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static const TextStyle _headerStyle = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w800,
+    color: Color(0xFFA3AED0),
+    letterSpacing: 0.5,
+  );
 }
 
 /* ===================== RECENT ESTIMATES ===================== */
@@ -425,38 +579,93 @@ class RecentEstimatesWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE0E5F2).withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: estimates
-            .map(
-              (e) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.description, color: Colors.orange),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(e.title,
-                              style: const TextStyle(fontWeight: FontWeight.bold)),
-                          Text(e.date,
-                              style: const TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-                    Text(e.price),
-                  ],
+        children: [
+          const Text(
+            "Recent Estimates",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1B2559),
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...estimates.map((e) => _buildEstimateItem(e)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEstimateItem(EstimateData e) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Row(
+        children: [
+          // Modern Icon Container
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7F2), // Very soft orange tint
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.description_outlined, 
+              color: Color(0xFFFF4911),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Info Column
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  e.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: Color(0xFF1B2559),
+                  ),
                 ),
-              ),
-            )
-            .toList(),
+                const SizedBox(height: 4),
+                Text(
+                  e.date,
+                  style: const TextStyle(
+                    color: Color(0xFFA3AED0),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Price Tag
+          Text(
+            e.price,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+              color: Color(0xFF1B2559),
+              letterSpacing: -0.5,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -19,7 +19,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     double horizontalPadding = screenWidth > 600 ? 30 : 16;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+     
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 24),
@@ -136,8 +136,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   // ================= RESPONSIVE USER CARD =================
-
-  Widget _userCard(
+Widget _userCard(
     BuildContext context,
     DocumentReference ref,
     String name,
@@ -147,69 +146,58 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     double screenWidth,
   ) {
     final roleColor = _roleColor(role);
-    bool isMobile = screenWidth < 750; // Threshold for stacking
+    bool isMobile = screenWidth < 750;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 18),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.035),
-            blurRadius: 24,
+            color: const Color(0xFFE0E5F2).withOpacity(0.4),
+            blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Accent strip
-            Container(
-              width: 5,
-              decoration: BoxDecoration(
-                color: roleColor.withOpacity(0.9),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  bottomLeft: Radius.circular(20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              // Modern Accent Strip
+              Container(
+                width: 6,
+                color: roleColor.withOpacity(0.8),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(isMobile ? 16 : 24),
+                  child: isMobile 
+                    ? _buildMobileLayout(context, ref, name, email, role, avatar)
+                    : _buildDesktopLayout(context, ref, name, email, role, avatar),
                 ),
               ),
-            ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: isMobile 
-                  ? _buildMobileLayout(context, ref, name, email, role, avatar)
-                  : _buildDesktopLayout(context, ref, name, email, role, avatar),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Desktop View: Horizontal Row
   Widget _buildDesktopLayout(context, ref, name, email, role, avatar) {
     return Row(
       children: [
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: Colors.grey.shade200,
-          backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-          child: avatar == null ? const Icon(Icons.person, color: Colors.grey) : null,
-        ),
-        const SizedBox(width: 14),
+        _buildModernAvatar(avatar, userId: ref.id),
+        const SizedBox(width: 16),
         Expanded(
           flex: 3,
           child: _nameEmailCol(name, email),
         ),
         Expanded(
           flex: 2,
-          child: _roleBadge(role),
+          child: _roleBadge(role, _roleColor(role)),
         ),
         Expanded(
           flex: 2,
@@ -220,29 +208,26 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  // Mobile View: Stacked Layout
   Widget _buildMobileLayout(context, ref, name, email, role, avatar) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: avatar != null ? NetworkImage(avatar) : null,
-              child: avatar == null ? const Icon(Icons.person, color: Colors.grey) : null,
-            ),
+            _buildModernAvatar(avatar, userId: ref.id, radius: 22),
             const SizedBox(width: 12),
             Expanded(child: _nameEmailCol(name, email)),
             _actionButtons(context, ref, name, role),
           ],
         ),
-        const Divider(height: 24),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Divider(height: 1, thickness: 0.8, color: Color(0xFFF4F7FE)),
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _roleBadge(role),
+            _roleBadge(role, _roleColor(role)),
             _projectCountStream(ref),
           ],
         ),
@@ -250,7 +235,25 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  // ================= UI SUB-COMPONENTS =================
+  // ================= MODERNIZED SUB-COMPONENTS =================
+
+  Widget _buildModernAvatar(String? avatar, {required String userId, double radius = 24}) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFF4F7FE), width: 2),
+      ),
+      child: CircleAvatar(
+        radius: radius,
+        backgroundColor: const Color(0xFFF4F7FE),
+        backgroundImage: avatar != null ? NetworkImage(avatar) : null,
+        child: avatar == null 
+          ? Icon(Icons.person, color: const Color(0xFFA3AED0), size: radius) 
+          : null,
+      ),
+    );
+  }
 
   Widget _nameEmailCol(String name, String email) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,31 +263,84 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2B3674),
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1B2559),
+              letterSpacing: -0.5,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             email,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 13, 
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF707EAE),
+            ),
           ),
         ],
       );
 
+ Widget _roleBadge(String role, Color color) {
+  return Align(
+    alignment: Alignment.centerLeft, // Prevents the badge from stretching horizontally
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12), // Slightly deeper tint for better contrast
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(
+          color: color.withOpacity(0.2), // Subtle border adds "definition" on desktop
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min, // Vital: Keeps the container tight to the text
+        children: [
+          // Using a Container instead of CircleAvatar for a crisper pixel-perfect dot
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            role.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10.5, // Slightly smaller for a more "UI Label" feel
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: 0.8, // Increased tracking for premium readability
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
   Widget _projectCountStream(DocumentReference ref) => StreamBuilder<QuerySnapshot>(
         stream: ref.collection('projects').snapshots(),
         builder: (context, snap) {
-          String text = snap.hasData ? "${snap.data!.docs.length} Projects" : "...";
-          return Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF2B3674),
-            ),
+          int count = snap.hasData ? snap.data!.docs.length : 0;
+          return Row(
+            children: [
+              const Icon(Icons.assignment_outlined, size: 16, color: Color(0xFFA3AED0)),
+              const SizedBox(width: 6),
+              Text(
+                "$count Projects",
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1B2559),
+                ),
+              ),
+            ],
           );
         },
       );
@@ -292,20 +348,37 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   Widget _actionButtons(context, ref, name, role) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _actionIcon(
-            Icons.edit,
-            Colors.blue,
+          _modernActionIcon(
+            Icons.edit_outlined,
+            const Color(0xFF422AFB), // Primary Indigo
             onTap: () => _showEditUserSheet(context, ref, role),
           ),
-          const SizedBox(width: 8),
-          _actionIcon(
-            Icons.delete,
-            Colors.orange,
+          const SizedBox(width: 10),
+          _modernActionIcon(
+            Icons.delete_outline_rounded,
+            const Color(0xFFEE5D50), // Modern Red
             onTap: () => _showDeleteUserSheet(context, ref, name),
           ),
         ],
       );
 
+  Widget _modernActionIcon(IconData icon, Color color, {required VoidCallback onTap}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
+      ),
+    );
+  }
   // ================= MODALS & HELPERS (Keep existing logic) =================
 
   // ================= EDIT USER (Original UI + Responsive Wrap) =================
@@ -531,17 +604,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         ),
       );
 
-  static Widget _roleBadge(String role) {
-    final color = _roleColor(role);
-    return UnconstrainedBox(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
-        child: Text(role, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11)),
-      ),
-    );
-  }
+
 
   static Color _roleColor(String role) {
     switch (role) {
